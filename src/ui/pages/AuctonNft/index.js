@@ -23,6 +23,10 @@ const AuctonNft = () => {
     const nftContract = new web3.eth.Contract(contract.nftAbi, contract.nftAddress);
     const marketplace = new web3.eth.Contract(contract.marketplaceAbi, contract.marketplaceAddress)
 
+  /*   '/* gfhfghfgh */
+
+
+
     useEffect(() => {
         nftSellsList(token_address);
     }, []);
