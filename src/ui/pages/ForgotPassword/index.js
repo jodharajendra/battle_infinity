@@ -3,7 +3,8 @@ import AuthService from "../../../api/services/AuthService";
 import { alertErrorMessage, alertSuccessMessage } from "../../../customComponent/CustomAlertMessage";
 import { Link, useNavigate } from "react-router-dom";
 import OtpButton from "../../../customComponent/OtpButton";
-import { validateEmail } from "../../../utils/Validation";
+import LoaderHelper from "../../../customComponent/Loading/LoaderHelper";
+
 const ForgotPassword = () => {
 
     const navigate = useNavigate();
@@ -25,8 +26,10 @@ const ForgotPassword = () => {
     }
 
     const handleForgotPassword = async (signId, otp, newPassword, cNewPassword) => {
+        LoaderHelper.loaderStatus(true);
         await AuthService.forgotPassword(signId, otp, newPassword, cNewPassword).then(async result => {
             if (result.success) {
+                LoaderHelper.loaderStatus(false);
                 try {
                     alertSuccessMessage(result.message);
                     resetEditInput();
@@ -36,15 +39,19 @@ const ForgotPassword = () => {
                     // console.log('error', `${error}`);
                 }
             } else {
+                LoaderHelper.loaderStatus(false);
+
                 alertErrorMessage(result.message);
             }
         });
     }
 
     const handleGetCode = async (signId) => {
+        LoaderHelper.loaderStatus(true);
         await AuthService.getCode(signId).then(async result => {
             //console.log(result, 'loginD');
             if (result.message === "OTP sent successfully.") {
+                LoaderHelper.loaderStatus(false);
                 try {
                     alertSuccessMessage(result.message);
                     setHideButton('1')
@@ -52,6 +59,7 @@ const ForgotPassword = () => {
                     alertErrorMessage(result.message);
                 }
             } else {
+                LoaderHelper.loaderStatus(false);
                 alertErrorMessage(result.message);
             }
         });
@@ -59,15 +67,18 @@ const ForgotPassword = () => {
 
 
     const handleGetCoderesend = async (signId) => {
+        LoaderHelper.loaderStatus(true);
         await AuthService.getCoderesend(signId).then(async result => {
             //console.log(result, 'loginD');
             if (result.message === "OTP sent successfully.") {
+                LoaderHelper.loaderStatus(false);
                 try {
                     alertSuccessMessage(result.message);
                 } catch (error) {
                     alertErrorMessage(result.message);
                 }
             } else {
+                LoaderHelper.loaderStatus(false);
                 alertErrorMessage(result.message);
             }
         });

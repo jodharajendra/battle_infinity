@@ -2,13 +2,9 @@ import React, { useState } from "react";
 import AuthService from "../../../api/services/AuthService";
 import { alertErrorMessage, alertSuccessMessage } from "../../../customComponent/CustomAlertMessage";
 import { Link, useNavigate } from "react-router-dom";
-import GoogleLogin from 'react-google-login';
+import LoaderHelper from "../../../customComponent/Loading/LoaderHelper";
 
 const RegisterPage = () => {
-
-    const handleGoogleResponse = (response) => {
-        console.log(response);
-    };
 
     const navigate = useNavigate();
     const [signId, setSignId] = useState("");
@@ -17,9 +13,6 @@ const RegisterPage = () => {
     const [lastName, setLastName] = useState("");
     const [password, setPassword] = useState("");
     const [checkButton, setCheckButton] = useState("one");
-
-
-    console.log(checkButton, 'checkButton');
 
     const resetEditInput = () => {
         setSignId("");
@@ -33,28 +26,28 @@ const RegisterPage = () => {
         if (checkButton === 'one') {
             alertErrorMessage('Please Select Checkbox')
         } else {
+            LoaderHelper.loaderStatus(true);
             await AuthService.register(signId, userName, firstName, lastName, password).then(async result => {
                 if (result.message === "Registration successful.") {
+                    LoaderHelper.loaderStatus(false);
                     try {
-                        // alertSuccessMessage(result.message);
+                        alertSuccessMessage(result?.message);
                         resetEditInput();
                         navigate("/login");
                     } catch (error) {
                         alertErrorMessage(error);
-                        // console.log('error', `${error}`);
                     }
                 } else {
+                    LoaderHelper.loaderStatus(false);
                     alertErrorMessage(result.message);
                 }
             });
         }
-
     }
 
     const showPassword = () => {
         let pass = document.querySelector('input[name="password"]');
         let icon = document.querySelector("#showpassword");
-        // console.log(pass.type);
         if (pass.type === "password") {
             icon.classList.add("show");
             pass.type = "text";
@@ -87,7 +80,6 @@ const RegisterPage = () => {
                                         <div class="sign-in_tab false">
                                             <h2 class="mb-2">Register</h2>
                                             <p>Enter your details to Register</p>
-
                                             <form action="#">
                                                 <div class="row">
                                                     <div class="col-12 mb-4">
@@ -121,14 +113,13 @@ const RegisterPage = () => {
                                                                 <input className="form-control" type="password" placeholder="Password" name="password" value={password} onChange={(e) => setPassword(e.target.value)} />
                                                                 <button className="btn_view btn-icon" id="showpassword" type="button" onClick={() => showPassword()}>
                                                                     <i class="ri-eye-line"></i>
-                                                                    {/* <i class="ri-eye-close-line"></i> */}
                                                                 </button>
                                                             </div>
                                                         </div>
                                                     </div>
                                                     <div className="col-md-12 mb-4 " >
                                                         <div class="form-check policy_check">
-                                                            <input class="form-check-input" type="checkbox" id="flexCheckDefault" name="checkButton" value={checkButton} onClick={()=>setCheckButton('two')} />
+                                                            <input class="form-check-input" type="checkbox" id="flexCheckDefault" name="checkButton" value={checkButton} onClick={() => setCheckButton('two')} />
                                                             <label class="form-check-label" for="flexCheckDefault">I have read and agree to Battle Infinity Terms of Service and Privacy Policy.</label>
                                                         </div>
                                                     </div>
@@ -143,36 +134,11 @@ const RegisterPage = () => {
                                                 <div className="or_bar" >
                                                     <span>Or Register With</span>
                                                 </div>
-                                                {/* <div className="row gx-2" >
-                                                    <div className="col-6" >
-                                                        <button class="btn btn-border-gradient font_russo btn-block  w-100 text-uppercase" type="button">
-                                                            <span>CONNECT WALLET</span>
-                                                        </button>
-                                                    </div>
-                                                    <div className="col-6" >
-                                                        <div 
-                                                            class="btn btn-border-gradient font_russo btn_transperant  btn-block w-100  text-uppercase" >
-
-                                                            <GoogleLogin
-                                                            clientId="AIzaSyDTVt-jj0sTVp6l9GsgepTKPluQ-HaMAmo"
-                                                            buttonText=" Google"
-                                                            onSuccess={handleGoogleResponse}
-                                                            onFailure={handleGoogleResponse}
-                                                            cookiePolicy={'single_host_origin'}
-                                                            />
-                                                        </div>
-
-                                                       
-                                                    </div>
-
-                                                </div> */}
                                                 <div class="row justify-content-center text-center mt-4 text-white">
                                                     <div class="col-lg-12">Already have an account? <Link class="color-primary " to="/login">Login</Link></div>
                                                 </div>
                                             </form>
-
                                         </div>
-
                                     </div>
                                 </div>
                             </div>
@@ -180,12 +146,6 @@ const RegisterPage = () => {
                     </div>
                 </div>
             </div>
-
-
-
-
-
-
         </>
     );
 }

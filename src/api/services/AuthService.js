@@ -94,8 +94,6 @@ const AuthService = {
 
   refreshTokenData: async () => {
     const refreshToken = localStorage.getItem("refreshToken");
-
-    console.log(refreshToken, 'refreshToken');
     const { baseUser, tokenRefresh } = ApiConfig;
     const url = baseUser + tokenRefresh;
     const headers = {
@@ -276,10 +274,10 @@ const AuthService = {
     const { baseUser, notificationUpdate } = ApiConfig;
     const url = baseUser + notificationUpdate;
     const params = {
-      logo: sales,
-      cover_photo: successfulBids,
-      first_name: bidsOutbids,
-      last_name: expiredBids
+      sales: sales,
+      successfull_bids: successfulBids,
+      bids_and_outbids: bidsOutbids,
+      expired_bids: expiredBids
     }
     const headers = {
       'Content-Type': 'application/json',
@@ -371,26 +369,7 @@ const AuthService = {
     return ApiCallGet(url, headers);
   },
 
-  sendWalletAddressCoustom: async () => {
-    const refreshToken = localStorage.getItem("refreshToken");
-    const { baseUser, updateAddressCoustam } = ApiConfig;
-    const url = baseUser + updateAddressCoustam;
-    const params = {
-      address: '0xC1fEec289C4110A103F7A3F759cFA7a61d18a173',
-    }
-
-
-
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': refreshToken,
-    };
-    return ApiCallPost(url, params, headers);
-  },
-
-
   createNft: async (walletNetwork, price, minimumBid, startingDate, expirationDate, totalExpirationDate, collectionName, collection, description, royalties, PropertiesData, fixedPrice, checkboxButton, walletAddress, featuredImage, contract, tokenId, uploadIfpsData) => {
-
     const refreshToken = localStorage.getItem("refreshToken");
     const { baseUrl, nftCreate } = ApiConfig;
     const url = baseUrl + nftCreate;
@@ -411,7 +390,7 @@ const AuthService = {
       to_address: walletAddress,
       royalty_recipient_address: walletAddress,
       file: featuredImage,
-      token_address: contract,
+      token_address: '0xD081A82179bdC6ecc25Fbfa8D956E06BbC8F3437',
       token_id: tokenId,
       metadata: uploadIfpsData,
 
@@ -425,19 +404,6 @@ const AuthService = {
   },
 
 
-  // getCreatedList: async (walletNetwork) => {
-  //   const refreshToken = localStorage.getItem("refreshToken");
-  //   const { baseUrl, getnftMetadata } = ApiConfig;
-  //   const url = baseUrl + getnftMetadata;
-  //   const params = {
-  //     nft_address: walletNetwork
-  //   }
-  //   const headers = {
-  //     'Content-Type': 'application/json',
-  //     'Authorization': refreshToken
-  //   };
-  //   return ApiCallPost(url, params, headers);
-  // },
 
 
   nftDetails: async (tokenID, address) => {
@@ -513,10 +479,7 @@ const AuthService = {
       }
       return output;
     }
-
     let raj = genHexString(80)
-
-    console.log(raj, ':RajAuth');
     const params = {
       data: [
         {
@@ -524,7 +487,7 @@ const AuthService = {
           content: {
             name: collectionName,
             description: description,
-            image: /* `http://64.227.140.58:3200` + '/' + */ featuredImage,
+            image: featuredImage,
             attributes: PropertiesData
           }
         }
@@ -623,6 +586,7 @@ const AuthService = {
       amount: bidAmountInput,
       token_id: tokenID,
       token_address: address,
+      sell_type: 'on_bid',
     }
     const headers = {
       'Content-Type': 'application/json',
@@ -646,11 +610,8 @@ const AuthService = {
 
   getSearchDetails: async (searchDetailData) => {
     const accessToken = localStorage.getItem("accessToken");
-
     const { baseUrl } = ApiConfig;
     const url = baseUrl + `marketplace-search/${searchDetailData}`;
-
-
     // const url = baseUser + searchQuery;
     const headers = {
       'Content-Type': 'application/json',
@@ -1013,6 +974,83 @@ const AuthService = {
     };
     return ApiCallPost(url, params, headers);
   },
+
+
+  sendUpdatedPassword: async (password) => {
+    const refreshToken = localStorage.getItem("refreshToken");
+    const { baseUrl, createWallet } = ApiConfig;
+    const url = baseUrl + createWallet;
+    const params = {
+      password: password
+    }
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': refreshToken
+    };
+    return ApiCallPost(url, params, headers);
+  },
+
+  sendUpdatedWallet: async (walletAddress) => {
+    const refreshToken = localStorage.getItem("refreshToken");
+    const { baseUrl, updateCenterlized } = ApiConfig;
+    const url = baseUrl + updateCenterlized;
+    const params = {
+      address: walletAddress,
+      type: "centralized"
+    }
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': refreshToken
+    };
+    return ApiCallPost(url, params, headers);
+  },
+
+
+
+  getCenterlizedWalletData: async (salesEvent) => {
+    const refreshToken = localStorage.getItem("refreshToken");
+
+    const { baseUrl, walletData } = ApiConfig;
+    const url = baseUrl + walletData;
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': refreshToken
+    };
+    return ApiCallGet(url, headers);
+  },
+
+
+  statusonBundle: async (tokenID, address, owner_id, sellAmount) => {
+    const refreshToken = localStorage.getItem("refreshToken");
+    const { baseUrl, nftUpdate } = ApiConfig;
+    const url = baseUrl + nftUpdate;
+    const params = {
+      token_id: tokenID,
+      token_address: address,
+      other_user_id: owner_id,
+      nft_price: sellAmount,
+      sell_type: "on_bundle",
+    }
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': refreshToken
+    };
+    return ApiCallPatch(url, params, headers);
+  },
+
+  getNftDetails: async (userId) => {
+    const refreshToken = localStorage.getItem("refreshToken");
+    const { baseUrl } = ApiConfig;
+    const url = baseUrl + `nft/${userId}`;
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': refreshToken,
+    };
+    return ApiCallGet(url, headers);
+  },
+
 
 
 }

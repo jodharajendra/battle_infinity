@@ -1,52 +1,31 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import AuthService from "../../../api/services/AuthService";
-import { alertErrorMessage } from "../../../customComponent/CustomAlertMessage";
+import { alertErrorMessage, alertSuccessMessage } from "../../../customComponent/CustomAlertMessage";
 import LoaderHelper from "../../../customComponent/Loading/LoaderHelper";
-import Web3 from "web3";
-import contract from '../../../contract.json'
 import { ApiConfig } from "../../../api/apiConfig/apiConfig";
+import { $ } from "react-jquery-plugin";
 import { BarChart } from 'react-charts-d3';
 import CollectionDetails from "../CollectionDetails";
 
-const NftDetailsWithoutLogin = (props) => {
+const AfterCollectionNftDetails = (props) => {
 
-    const data = [
-        { key: 'Group 1', values: [{ x: 'A', y: 23 }, { x: 'B', y: 8 }] },
-        { key: 'Group 2', values: [{ x: 'A', y: 15 }, { x: 'B', y: 37 }] },
-    ];
-
+    let walletType = props?.userid[2]
+    const [nftDetails, setnftDetails] = useState();
+    const [metaData, setmetaData] = useState();
+    const [reportReason, setReportReason] = useState('')
+    const [description, setDescription] = useState('')
+    const [favouriteDataList, setFavouriteDataList] = useState([])
     let screenTab = props?.userid[1]
     let newTokenAddress = '0xD081A82179bdC6ecc25Fbfa8D956E06BbC8F3437'
-    
-    let web3
-    if (!window.ethereum) {
-        web3 = new Web3("https://data-seed-prebsc-1-s1.binance.org:8545/")
-    } else {
-        web3 = new Web3(window.ethereum)
-    }
-
-    const nftContract = new web3.eth.Contract(contract.nftAbi, contract.nftAddress);
     const messagesEndRef = useRef(null)
     const scrollTop = () => {
         messagesEndRef?.current?.scrollIntoView(true)
     }
-    const [nftDetails, setnftDetails] = useState();
-    const [metaData, setmetaData] = useState();
-    const [bnbBalance, setBnbBalance] = useState([])
-    const [favouriteDataList, setFavouriteDataList] = useState([])
-
-    useEffect(() => {
-        balanceNft();
-    })
-
-    const balanceNft = async () => {
-        const accounts = await web3.eth.getAccounts()
-        const Balance = await web3.eth.getBalance(accounts[0])
-        const account = accounts[0]
-        setBnbBalance(Balance / 10 ** 18)
-        const tx = await nftContract.methods.totalSupply().call()
-    }
+    const data = [
+        { key: 'Group 1', values: [{ x: 'A', y: 23 }, { x: 'B', y: 8 }] },
+        { key: 'Group 2', values: [{ x: 'A', y: 15 }, { x: 'B', y: 37 }] },
+    ];
 
     useEffect(() => {
         scrollTop();
@@ -60,7 +39,6 @@ const NftDetailsWithoutLogin = (props) => {
                 try {
                     setnftDetails(result?.data)
                     setmetaData(JSON.parse(result?.data?.metadata))
-                    LoaderHelper.loaderStatus(false);
                 } catch (error) {
                     alertErrorMessage(error);
                 }
@@ -70,16 +48,39 @@ const NftDetailsWithoutLogin = (props) => {
             }
         });
     }
-    const handleFavouriteData = async () => {
-        await AuthService.getFavouriteData().then(async result => {
+
+    const handleCollectionDetailsReport = async (reportReason, description) => {
+        await AuthService.nftDetailsReport(props?.userid[0]?._id, reportReason, description).then(async result => {
             if (result.success) {
-                setFavouriteDataList(result?.data)
+                alertSuccessMessage('done')
+                $("#reportmodal").modal('hide');
             }
         });
     }
 
-    const handleErrorMesage = () => {
-        alertErrorMessage('Please Login First');
+    const handleFavouriteData = async () => {
+        await AuthService.getFavouriteData().then(async result => {
+            if (result.success) {
+                try {
+                    // alertSuccessMessage(result?.message)
+                    setFavouriteDataList(result?.data)
+                } catch (error) {
+                    // alertErrorMessage(result.message);
+                }
+            } else {
+                // alertErrorMessage(result.message);
+            }
+        });
+    }
+
+    const handleAddFavourite = async (status) => {
+        await AuthService.setFavouriteDataNft(props?.userid[0]?.id, status).then(async result => {
+            if (result.success) {
+                // alertSuccessMessage(result?.message);
+            } else {
+                alertErrorMessage(result?.message);
+            }
+        });
     }
 
     return (
@@ -91,8 +92,19 @@ const NftDetailsWithoutLogin = (props) => {
                             <div class="row">
                                 <div class="col-xxl-5 col-lg-6 mb-3">
                                     <div class="custom-tab-content p-0 explore-style-one">
+                                        <div class="thumb-header" >
+                                            {/* <button class="reaction-btn liked" onClick={() => handleAddFavourite()}>
+                                                <span>12</span>
+                                                <i class="ri-heart-line"></i>
+                                            </button> */}
+                                            {/* <button class="reaction-btn total-watch left" data-bs-toggle="tooltip" data-bs-placement="top" title="Total Watch">
+                                                <img src="images/eth_white.svg" width="22" height="22" />
+                                            </button> */}
+                                        </div>
                                         <div class="thumb">
-                                            <img src={`${ApiConfig.baseUrl + props?.userid[0]?.file}`} class="img-fluid" />
+                                            <div style={{ height: '350px' }} >
+                                                <img src={`${ApiConfig.baseUrl + props?.userid[0]?.file}`}  style={{ height: '300px' }} />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -100,26 +112,36 @@ const NftDetailsWithoutLogin = (props) => {
                                     <div class="details-content">
                                         <div class="d-flex-between" >
                                             {/* <Link class=""> Back </Link> */}
-                                            {props?.userid[0]?.name}
+                                            <Link class="" to="#" > {props?.userid[0]?.name}</Link>
+                                            <div class="user_control m-0" >
+                                                <ul class="nav">
+                                                    <li class="dropdown">
+                                                        <Link class="btn-icon" to="#" role="button" id="dropdownMenuLink1" data-bs-toggle="dropdown" aria-expanded="false">
+                                                            <i class="ri-share-fill"></i>
+                                                        </Link>
+                                                        <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink1">
+                                                            <li><Link class="dropdown-item" onClick={() => navigator.clipboard.writeText("https://appinopinfo.com")}><i class="ri-file-copy-fill me-2"></i> Copy Link</Link></li>
+                                                            <li><Link class="dropdown-item" to="https://www.facebook.com/" target='_blank'><i class="ri-facebook-circle-fill me-2"></i>  Share on Facebook</Link></li>
+                                                            <li><Link class="dropdown-item" to="https://twitter.com/i/flow/login" target='_blank'> <i class="ri-twitter-fill me-2"></i> Share On Twitter</Link></li>
+                                                            <li><Link class="dropdown-item" to="https://web.whatsapp.com/" target='_blank'> <i class="ri-whatsapp-fill me-2"></i> Share On Whatsapp</Link></li>
+                                                        </ul>
+                                                    </li>
+                                                    <li class="dropdown">
+                                                        <Link class="btn-icon" to="#" role="button" id="dropdownMenuLink2" data-bs-toggle="dropdown" aria-expanded="false">
+                                                            <i class="ri-more-fill"></i>
+                                                        </Link>
+                                                        <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink2">
+                                                            <li><Link class="dropdown-item" to="/update_profile"> <i class="ri-settings-3-line me-2"></i> Settings</Link></li>
+                                                            <li><Link class="dropdown-item" to="#"> <i class="ri-list-check-2 me-2"></i> Featured items</Link></li>
+                                                            <li><Link class="dropdown-item" to="" > <i class="ri-flag-fill me-2"></i> <span data-bs-toggle="modal" data-bs-target="#reportmodal"  >Report</span>  </Link></li>
+                                                        </ul>
+                                                    </li>
+                                                </ul>
+                                            </div>
                                         </div>
                                         <h2 class="main_title mb-0">{props?.userid[0]?.token_id}</h2>
                                         <p class="subtitle">Owneds by <Link to="#" >{props?.userid[0]?.name}</Link></p>
                                         <div class="view_count d-flex-center" > <i class="ri-eye-line me-2"></i> 0 View</div>
-                                        <div class="custom-tab-content mt-7" >
-                                            <div class="sale_counter">  </div>
-                                            <div class="bid_price" >
-                                                <div class="row gx-2" >
-                                                    <div class="col-md-4" >
-                                                        <Link data-bs-toggle="modal" class="btn  btn-lg btn-gradient w-100 justify-content-center mt-6 btn-border-gradient" onClick={handleErrorMesage}><span> Sell now </span></Link>
-                                                    </div>
-                                                    <div class="col-md-4" >
-                                                        <Link data-bs-toggle="modal" class="btn  btn-lg btn-gradient w-100 justify-content-center mt-6 btn-border-gradient" onClick={handleErrorMesage}><span> Rent now </span></Link>
-                                                    </div> <div class="col-md-4" >
-                                                        <Link data-bs-toggle="modal" class="btn  btn-lg btn-gradient w-100 justify-content-center mt-6 btn-border-gradient" onClick={handleErrorMesage}><span> Auction now </span></Link>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -130,7 +152,7 @@ const NftDetailsWithoutLogin = (props) => {
                                             <p class="mb-0  d-flex-center"><i class="ri-file-list-line me-3"></i> Description</p>
                                         </div>
                                         <div class="list-body border-top" >
-                                            <p class="mb-0">By <strong><Link to="#" > TheMonkeyFaceMan </Link></strong></p>
+                                            <p class="mb-0">By <strong><Link to="#" >  {props?.userid[0]?.name} </Link></strong></p>
                                             <p class="mb-0" >{metaData?.description}</p>
                                         </div>
                                         <div class="accordion" id="accordionnft_details">
@@ -149,7 +171,6 @@ const NftDetailsWithoutLogin = (props) => {
                                                                         <div class="sc_body" >
                                                                             <div class="sc_sub" >{data?.trait_type}</div>
                                                                             <p class="sc_title" >{data?.value}</p>
-                                                                            <span class="sc_footer" >655%  have this trait</span>
                                                                         </div>
                                                                     </Link>
                                                                 )
@@ -183,9 +204,7 @@ const NftDetailsWithoutLogin = (props) => {
                                                             <li>Token ID <span><Link to="#" >{nftDetails?.token_id
                                                             }</Link></span></li>
                                                             <li>Token Standard <span>{nftDetails?.contract_type}</span></li>
-                                                            <li>Chain <span>BSC</span></li>
-                                                            <li>Metadata <span>centralized</span></li>
-                                                            <li>Creator Fee <span>0%</span></li>
+                                                            <li>Metadata <span>{walletType}</span></li>
                                                         </ul>
                                                     </div>
                                                 </div>
@@ -206,7 +225,6 @@ const NftDetailsWithoutLogin = (props) => {
                                                     <div class="accordion-body p-0">
                                                         <div class="py-5 text-center">
                                                             <BarChart data={data} />
-
                                                         </div>
                                                     </div>
                                                 </div>
@@ -292,11 +310,36 @@ const NftDetailsWithoutLogin = (props) => {
                     </section>
                 </div>
 
+                {/* Report model */}
+                <div class="modal fade" id="reportmodal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="reportmodalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header no-border flex-column px-8">
+                                <h3 class="modal-title" id="reportmodalLabel"> Report </h3>
+                                <button type="button" class="btn-custom-closer" data-bs-dismiss="modal" aria-label="Close"><i
+                                    class="ri-close-fill"></i></button>
+                            </div>
+                            <div class="modal-body px-8 ">
+                                <form action="#">
+                                    <div class="form-group mb-2">
+                                        <label>Reason</label>
+                                        <input type="text" class="form-control" placeholder="Enter Reason" aria-label="Recipient's usernameReason" aria-describedby="basic-addon2" value={reportReason} onChange={(e) => setReportReason(e.target.value)} />
+                                    </div>
+                                    <div class="form-group mb-2">
+                                        <label>Description</label>
+                                        <textarea className=" " rows="5" placeholder="Enter Description" value={description} onChange={(e) => setDescription(e.target.value)}></textarea>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer no-border px-8 pb-5">
+                                <button type="button" class="btn btn-gradient btn-lg w-100 justify-content-center" onClick={() => (handleCollectionDetailsReport(reportReason, description))}><span>Submit</span></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </>
             : <CollectionDetails />
     )
-
-
 }
 
-export default NftDetailsWithoutLogin
+export default AfterCollectionNftDetails

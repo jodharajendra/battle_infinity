@@ -56,7 +56,7 @@ const LoginPage = () => {
         await AuthService.login(signId, password).then(async result => {
             if (result.success) {
                 LoaderHelper.loaderStatus(false);
-                alertSuccessMessage(result.message)
+                // alertSuccessMessage(result.message)
                 updateProfileState(result.data);
                 localStorage.setItem("accessToken", result.data.accessToken);
                 localStorage.setItem("refreshToken", result.data.refreshToken);
@@ -98,7 +98,7 @@ const LoginPage = () => {
         await AuthService.loginWithMetamask(firstName, lastName, email, address).then(async result => {
             if (result.success) {
                 try {
-                    alertSuccessMessage(result.message);
+                    // alertSuccessMessage(result.message);
                     $("#add_info_b_login").modal('hide');
                     updateProfileState(result.data);
                     localStorage.setItem("accessToken", result.data.accessToken);
@@ -117,11 +117,11 @@ const LoginPage = () => {
         });
     }
 
-    const handleMetamaskLoginAuto = async () => {
-        await AuthService.loginWithMetamask(first_Name, last_Name, emailID, address).then(async result => {
+    const handleMetamaskLoginAuto = async (firstName, lastName, emailId, address) => {
+        await AuthService.loginWithMetamask(firstName, lastName, emailId, address).then(async result => {
             if (result.success) {
                 try {
-                    alertSuccessMessage(result.message);
+                    // alertSuccessMessage(result.message);
                     $("#add_info_b_login").modal('hide');
                     updateProfileState(result.data);
                     localStorage.setItem("accessToken", result.data.accessToken);
@@ -144,7 +144,7 @@ const LoginPage = () => {
         await AuthService.updateMeatmaskAdderess(address).then(async result => {
             if (result.success) {
                 try {
-                    handleMetamaskLoginAuto(first_Name, last_Name, emailID, address);
+                    handleMetamaskLoginAuto(result?.data?.first_name, result?.data?.last_name, result?.data?.email_or_phone, result?.data?.wallet_address);
                 } catch (error) {
                     console.log('error', `${error}`);
                 }
@@ -160,14 +160,11 @@ const LoginPage = () => {
         });
     }
 
-
-
-
     const handlegoogleLogin = async () => {
         await AuthService.loginWithgoogle(userDetails?.aud, userDetails?.email, userDetails?.given_name, userDetails?.family_name).then(async result => {
             if (result.success) {
                 try {
-                    alertSuccessMessage(result.message);
+                    // alertSuccessMessage(result.message);
                     updateProfileState(result.data);
                     localStorage.setItem("accessToken", result.data.accessToken);
                     localStorage.setItem("refreshToken", result.data.refreshToken);

@@ -1,38 +1,50 @@
-import React, { useEffect, useState, useContext, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import AuthService from "../../../api/services/AuthService";
-import { alertErrorMessage, alertSuccessMessage } from "../../../customComponent/CustomAlertMessage";
+import { alertErrorMessage } from "../../../customComponent/CustomAlertMessage";
 import Select from 'react-select';
 import moment from "moment"
 import { useAccount } from 'wagmi'
-import { ProfileContext } from "../../../context/ProfileProvider";
 import { Link, useNavigate } from "react-router-dom";
 import { ApiConfig } from "../../../api/apiConfig/apiConfig";
 import { $ } from "react-jquery-plugin";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import NftDetails from "../NftDetails";
-import Web3 from "web3";
 import { BarChart } from 'react-charts-d3';
+import Web3 from "web3";
+
 const ProfilePage = () => {
-    const web3 = new Web3(window.ethereum)
-    const [profileState, updateProfileState] = useContext(ProfileContext);
-    const walletAddress = localStorage.getItem("wallet_address");
+    const { address, isConnecting, isDisconnected } = useAccount()
+
+    useEffect(() => {
+        if (address) {
+            setProfileWallet(address)
+        }
+    }, [address])
+
+
+    useEffect(() => {
+        scrollTop();
+    }, [address]);
+
+    let web3
+
+    if (!window.ethereum) {
+        web3 = new Web3("https://data-seed-prebsc-1-s1.binance.org:8545/")
+    } else {
+        web3 = new Web3(window.ethereum)
+    }
+
     const handleLogOut = () => {
-        updateProfileState({});
         localStorage.clear();
         navigate("/login");
         window.location.reload();
     }
     const [profileWallet, setProfileWallet] = useState([]);
-
-    const { address, isConnecting, isDisconnected } = useAccount()
     const [userDetails, setUserDetails] = useState([])
     const [collectedNftList, setCollectedNftList] = useState([])
     const [favouriteDataWallet, setFavouriteDataWallet] = useState([])
     const [createdNftData, setCreatedNftData] = useState([])
     const [favouriteDataList, setFavouriteDataList] = useState([])
-    const scrollTop = () => {
-        messagesEndRef?.current?.scrollIntoView(true)
-    }
     const [userData, setUserData] = useState([]);
     const [createdNftSearch, setCreatedNftSearch] = useState();
     const [activeScreen, setActiveScreen] = useState('profilePage');
@@ -58,8 +70,11 @@ const ProfilePage = () => {
     const [offerEvent, setOfferEvent] = useState('true');
     const [collectionEventId, setCollctionEventId] = useState([]);
     const [createdNftListNew, setCreatedNftListNew] = useState([]);
+    const [collectedUserType, setCollectedUserType] = useState([]);
     const messagesEndRef = useRef(null)
     const navigate = useNavigate();
+    const [password, setPassword] = useState('');
+    const [hideModel, setHideModel] = useState('false');
 
     const linkFollow = (item) => {
         setUserData(item);
@@ -73,6 +88,7 @@ const ProfilePage = () => {
         }
     }, [address])
 
+
     useEffect(() => {
         if (favouriteDataWallet === '') {
             $("#yesnoalertmodal").modal('show');
@@ -82,9 +98,8 @@ const ProfilePage = () => {
     }, [])
 
     useEffect(() => {
-        handleAllCreatedNft();
-        handleCollectedList();
-
+        // handleAllCreatedNft();
+        // handleCollectedList();
     }, [])
 
     function hideMenu() {
@@ -115,6 +130,7 @@ const ProfilePage = () => {
                     setUserDetails(result.data);
                     setFavouriteDataWallet(result?.data?.wallet_address);
                     setProfileWallet(result?.data?.wallet_address)
+                    setCollectedUserType(result?.data?.type)
                 } catch (error) {
                     alertErrorMessage(result.message);
                 }
@@ -135,7 +151,6 @@ const ProfilePage = () => {
             if (result.success) {
                 localStorage.setItem('accessToken', result?.data?.accessToken);
                 localStorage.setItem('refreshToken', result?.data?.refreshToken);
-                updateProfileState(result.data);
             } else {
                 //  alertErrorMessage('Raj');
                 handleLogOut();
@@ -160,51 +175,42 @@ const ProfilePage = () => {
 
     const handleSearch = (e) => {
         let serchItem = collectednftSearch.filter((item) => {
-            return item?.name?.includes(e.target.value) || item?.token_id?.toLowerCase()?.includes(e.target.value)
+            return item?.name?.toLowerCase().includes(e.target.value) || item?.token_id?.toLowerCase()?.includes(e.target.value)
         })
         setCollectedNftList(serchItem)
     }
 
     const handleSearchManual = (e) => {
         let serchItem = collectednftSearch.filter((item) => {
-            return item?.name?.includes(e.target.value) || item?.token_id?.toLowerCase()?.includes(e.target.value)
+            return item?.name?.toLowerCase().includes(e.target.value) || item?.token_id?.toLowerCase()?.includes(e.target.value)
         })
         setCollectedNftListNew(serchItem)
     }
 
     const handleSearchManualCreated = (e) => {
         let serchItem = createdNftSearch.filter((item) => {
-            return item?.name?.includes(e.target.value) || item?.token_id?.toLowerCase()?.includes(e.target.value)
+            return item?.name?.toLowerCase()?.includes(e.target.value) || item?.token_id?.toLowerCase()?.includes(e.target.value)
         })
         setCreatedNftListNew(serchItem)
     }
 
-    const handleCollectedList = async () => {
-        await AuthService.getCollectedNft(address).then(async result => {
-            if (result.success) {
-                try {
-                    setCollectedNftSearch(result?.data?.data.reverse())
-                } catch (error) {
-                    alertErrorMessage(result.message);
-                }
-            } else {
-                alertErrorMessage(result.message);
-            }
-        });
-    }
-
     const handleSearchCreated = (e) => {
         let serchItem = createdNftSearch.filter((item) => {
-            return item?.name?.includes(e.target.value) || item?.token_id?.toLowerCase()?.includes(e.target.value)
+            return item?.name?.toLowerCase()?.includes(e.target.value) || item?.token_id?.toLowerCase()?.includes(e.target.value)
         })
         setCreatedNftData(serchItem)
     }
 
-    const handleAllCreatedNft = async () => {
-        await AuthService.getCreatedNftData().then(async result => {
+    const handleWalletAddressCoustom = async () => {
+        setHideModel('true');
+    }
+
+    const handleUpdatePassword = async (password) => {
+        await AuthService.sendUpdatedPassword(password).then(async result => {
             if (result.success) {
                 try {
-                    setCreatedNftSearch(result?.data?.data);
+                    // alertSuccessMessage(result.message)
+                    handleupdatedAddres(result.data);
                 } catch (error) {
                     alertErrorMessage(result.message);
                 }
@@ -214,11 +220,14 @@ const ProfilePage = () => {
         });
     }
 
-    const handleWalletAddressCoustom = async () => {
-        await AuthService.sendWalletAddressCoustom().then(async result => {
+
+    const handleupdatedAddres = async (walletAddress) => {
+        await AuthService.sendUpdatedWallet(walletAddress).then(async result => {
             if (result.success) {
                 try {
+                    // alertSuccessMessage(result.message)
                     $("#yesnoalertmodal").modal('hide');
+                    setHideModel('false');
                     handleuserProfile();
                     window.location.reload();
                 } catch (error) {
@@ -229,8 +238,8 @@ const ProfilePage = () => {
             }
         });
     }
+
     useEffect(() => {
-        scrollTop();
         handleActivityLOgs();
         handleFavouriteData();
     }, []);
@@ -265,19 +274,24 @@ const ProfilePage = () => {
         });
     }
 
-    let limit = '1000'
+    const [limitCreated, setLimitCreated] = useState(6);
+    const [limitCollected, setLimitCollected] = useState(6);
+    const [collectionLength, setCollectionLength] = useState([]);
+    const [createdLength, setCreatedLength] = useState([]);
+
+
     useEffect(() => {
-        handleSetLimitCreated();
         handleSetLimitCollected();
     }, []);
 
     const handleSetLimitCreated = async () => {
-        await AuthService.getLimitCreated(limit).then(async result => {
+        await AuthService.getLimitCreated(limitCreated).then(async result => {
             if (result.success) {
                 try {
-                    setCreatedNftData(result?.data?.data?.reverse())
+                    setCreatedNftData(result?.data?.data)
                     setCreatedNftSearch(result?.data?.data);
-
+                    setCreatedLength(result?.data?.filter?.count);
+                    setLimitCreated(limitCreated + 3);
                 } catch (error) {
                     alertErrorMessage(result.message);
                 }
@@ -288,12 +302,13 @@ const ProfilePage = () => {
     }
 
     const handleSetLimitCollected = async () => {
-        await AuthService.getLimitCollected(limit).then(async result => {
+        await AuthService.getLimitCollected(limitCollected).then(async result => {
             if (result.success) {
                 try {
-                    setCollectedNftList(result?.data?.data?.reverse());
-                    setCollectedNftSearch(result?.data?.data)
-
+                    setCollectedNftList(result?.data?.data);
+                    setCollectedNftSearch(result?.data?.data);
+                    setCollectionLength(result?.data?.filter?.count);
+                    setLimitCollected(limitCollected + 3);
                 } catch (error) {
                     alertErrorMessage(result.message);
                 }
@@ -333,7 +348,7 @@ const ProfilePage = () => {
             if (result.success) {
                 try {
                     setActivityData(result?.data)
-                    alertSuccessMessage(result?.message);
+                    // alertSuccessMessage(result?.message);
                     handleResetFilterData()
                 } catch (error) {
                     alertErrorMessage(result.message);
@@ -350,7 +365,7 @@ const ProfilePage = () => {
             if (result.success) {
                 try {
                     setActivityData(result?.data)
-                    alertSuccessMessage(result?.message);
+                    // alertSuccessMessage(result?.message);
                     handleResetFilterData()
                 } catch (error) {
                     alertErrorMessage(result.message);
@@ -370,7 +385,7 @@ const ProfilePage = () => {
             if (result.success) {
                 try {
                     setActivityData(result?.data)
-                    alertSuccessMessage(result?.message);
+                    // alertSuccessMessage(result?.message);
                     handleResetFilterData()
                 } catch (error) {
                     alertErrorMessage(result.message);
@@ -386,7 +401,7 @@ const ProfilePage = () => {
             if (result.success) {
                 try {
                     setActivityData(result?.data)
-                    alertSuccessMessage(result?.message);
+                    // alertSuccessMessage(result?.message);
                     handleResetFilterData()
                 } catch (error) {
                     alertErrorMessage(result.message);
@@ -402,7 +417,7 @@ const ProfilePage = () => {
             if (result.success) {
                 try {
                     setActivityData(result?.data)
-                    alertSuccessMessage(result?.message);
+                    // alertSuccessMessage(result?.message);
                     handleResetFilterData()
                 } catch (error) {
                     alertErrorMessage(result.message);
@@ -419,7 +434,7 @@ const ProfilePage = () => {
             if (result.success) {
                 try {
                     setActivityData(result?.data)
-                    alertSuccessMessage(result?.message);
+                    // alertSuccessMessage(result?.message);
                     handleResetFilterData()
                 } catch (error) {
                     alertErrorMessage(result.message);
@@ -436,7 +451,7 @@ const ProfilePage = () => {
             if (result.success) {
                 try {
                     setActivityData(result?.data)
-                    alertSuccessMessage(result?.message);
+                    // alertSuccessMessage(result?.message);
                     handleResetFilterData()
                 } catch (error) {
                     alertErrorMessage(result.message);
@@ -447,18 +462,21 @@ const ProfilePage = () => {
         });
     }
 
+    const scrollTop = () => {
+        messagesEndRef?.current?.scrollIntoView(true)
+    }
+
     return (
         activeScreen === 'profilePage' ?
             <>
                 <div className="page_wrapper" ref={messagesEndRef}>
-                    {/* <!-- page banner --> */}
                     <section className="profile_sec my_account_sec">
                         <div className="bg-cover">
                             {
                                 userDetails?.cover_photo ?
                                     <img src={`${ApiConfig.baseUrl + userDetails?.cover_photo}`} className="" />
                                     :
-                                    <img src="images/bg/bg-10.jpg" />
+                                    <img src='images/banners/banner_1.png' />
                             }
                         </div>
                         <div className="container">
@@ -468,18 +486,19 @@ const ProfilePage = () => {
                                     :
                                     <img src="images/avatar/user_lg.jpg" className="user_img" />
                             }
-
                             <div className="row">
                                 <div className="col-md-6">
                                     <div className="user_data">
                                         <h2>{userDetails?.username}</h2>
+                                        {/* <h2>{userDetails?.first_name} {userDetails?.last_name} </h2> */}
+
                                         <p className="user_exps">
                                             {
-                                                walletAddress === '0xC1fEec289C4110A103F7A3F759cFA7a61d18a173' || profileWallet === '0xC1fEec289C4110A103F7A3F759cFA7a61d18a173' ? '0xC1fEec289C4110A103F7A3F759cFA7a61d18a173'
-                                                    :
+                                                // !profileWallet ?
+                                                // <span>{address}</span>
+                                                <span>{profileWallet}</span>
 
-                                                    <span>{address}</span>
-
+                                                // : profileWallet
                                             }
                                             <em></em>
                                             <span>Joined {moment(userDetails?.createdAt).format('lll')}</span>
@@ -496,14 +515,10 @@ const ProfilePage = () => {
                                     <Link className="active btn btn-small btn-link" data-bs-toggle="tab" to="#on-collected">Collected</Link>
                                 </li>
                                 <li>
-                                    <Link className="btn btn-small btn-link" data-bs-toggle="tab" to="#on-created">Created</Link>
+                                    <Link className="btn btn-small btn-link" data-bs-toggle="tab" to="#on-created" onClick={handleSetLimitCreated}>Created</Link>
                                 </li>
                                 <li>
                                     <Link className="btn btn-small btn-link" data-bs-toggle="tab" to="#on-activity">Activity</Link>
-                                </li>
-
-                                <li>
-                                    {/* <Link className="btn btn-small btn-link" data-bs-toggle="tab" to="#auctionList">Auctions's</Link> */}
                                 </li>
                                 <li>
                                     <Link className="btn btn-small btn-link" data-bs-toggle="tab" to="#favouriteList">Favourite Data</Link>
@@ -522,12 +537,7 @@ const ProfilePage = () => {
                                                     <input type="text" name="search" placeholder="Search by name or attribute" id="search" onChange={(e) => { handleSearch(e) }} />
                                                     <button className="search-btn" type="button"> <i className="ri-search-line"></i> </button>
                                                 </div>
-                                                {/* <div className="filter-select-option border-gradient">
-                                                    <Select options={optionsTop} />
-                                                </div> */}
                                             </div>
-                                            {/* <!-- End .left filer --> */}
-
                                             <div className="d-flex-center filter-right-cate grid-view-tabs">
                                                 <ul className="nav icon-tabs">
                                                     <li>
@@ -540,7 +550,6 @@ const ProfilePage = () => {
                                             </div>
                                         </div>
                                     </form>
-
                                     <div id="main_panel_sec1" className="main_panel mt-10 ">
                                         <div className="sidepanel">
                                             <div className="filter_header">
@@ -754,7 +763,7 @@ const ProfilePage = () => {
 
                                             </div>
                                         </div>
-                                        <div className="side_main_panel">
+                                        <div className="side_main_panel" >
                                             <div className="iterfsh">
                                                 <Link to="#" className=""> {/* <i className="ri-refresh-line me-2"></i> */}  </Link>
                                                 <h5>{collectedNftList?.length} Items</h5>
@@ -769,13 +778,10 @@ const ProfilePage = () => {
                                                                     <div className="grid_iteam">
                                                                         <div className="explore-style-one explore-style-overlay border-gradient">
                                                                             <div className="thumb">
-                                                                                <Link /* to="/nft_details" */ onClick={() => linkFollow(item)} className="ratio ratio-1x1" >
-                                                                                    <img src={`${ApiConfig.baseUrl + item?.file}`} alt="nft live auction thumbnail" />
-                                                                                    {/* <img src={JSON.parse(item?.own_by_address[0]?.metadata).image} alt="nft live auction thumbnail" /> */}
-                                                                                    {/* {console.log(JSON.parse(item?.own_by_address[0]?.metadata))} */}
+                                                                                <Link onClick={() => linkFollow(item)} className="ratio ratio-1x1" >
+                                                                                    <img src={`${ApiConfig.baseUrl + item?.file}`} alt="nft live auction thumbnail" className="img-fluid w-100" />
                                                                                 </Link>
                                                                             </div>
-                                                                            {/* <!-- End .thumb --> */}
                                                                             <div className="content px-4">
                                                                                 <div className="d-flex-between align-items-center pt-4">
                                                                                     <div>
@@ -786,13 +792,12 @@ const ProfilePage = () => {
                                                                                     <span className="biding-price d-flex-center text-white"> {item?.token_id} </span>
                                                                                 </div>
                                                                                 <hr />
-                                                                                {/* <!-- End .product-owner --> */}
                                                                                 <div className="action-wrapper d-flex-between border-0 pb-4">
                                                                                     <span className="biding-price d-flex-center  text-white">Asking Price</span>
                                                                                     <span className="biding-price d-flex-center  text-white">{item?.price}</span>
                                                                                 </div>
                                                                             </div>
-                                                                            <Link to="#" onClick={() => linkFollow(item)} className="btn  btn-block btn-gradient w-100 text-center btn-small">
+                                                                            <Link onClick={() => linkFollow(item)} className="btn  btn-block btn-gradient w-100 text-center btn-small">
                                                                                 <span>Details</span>
                                                                             </Link>
                                                                         </div>
@@ -801,8 +806,27 @@ const ProfilePage = () => {
                                                                 : null}
                                                         </div>
                                                     </section>
+                                                    {
+                                                        collectedNftList.length > 0 ?
+                                                            <>
+                                                                {
+                                                                    collectionLength === collectedNftList.length ? '' :
+                                                                        <div className="row">
+                                                                            <div className="col-12 text-center mt-4">
+                                                                                <button type="button" className="btn btn-outline border-gradient px-6" onClick={handleSetLimitCollected}>
+                                                                                    <span><i className="ri-loader-4-fill"></i> Load More</span>
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                }
+                                                            </>
+
+                                                            :
+                                                            ''
+                                                    }
                                                 </div>
                                                 {/*  Collected Item End*/}
+
                                                 <div id="view-list" className="tab-pane fade">
                                                     <section className="explore_view">
                                                         <div className="itemas_view grid-container grid-view-two">
@@ -811,7 +835,7 @@ const ProfilePage = () => {
                                                                     <div className="grid_iteam">
                                                                         <div className="explore-style-one explore-style-overlay border-gradient">
                                                                             <div className="thumb">
-                                                                                <Link onClick={() => linkFollow(item)}>
+                                                                                <Link className="ratio ratio-1x1" onClick={() => linkFollow(item)}>
                                                                                     <img src={`${ApiConfig.baseUrl + item?.file}`} alt="nft live auction thumbnail" />
                                                                                 </Link>
                                                                             </div>
@@ -830,16 +854,9 @@ const ProfilePage = () => {
                                                                                     <span className="biding-price d-flex-center  text-white">{item?.price}</span>
                                                                                 </div>
                                                                             </div>
-                                                                            {
-                                                                                item?.sell_type === 'on_sell' ?
 
-                                                                                    <button className="btn  btn-block btn-gradient w-100 text-center btn-small">
-                                                                                        <span>On Sell</span>
-                                                                                    </button>
-                                                                                    :
-                                                                                    <Link className="btn  btn-block btn-gradient w-100 text-center btn-small" onClick={() => linkFollow(item)}><span> Sell Now </span>
-                                                                                    </Link>
-                                                                            }
+                                                                            <Link className="btn  btn-block btn-gradient w-100 text-center btn-small" onClick={() => linkFollow(item)}><span> Details </span>
+                                                                            </Link>
 
                                                                         </div>
                                                                     </div>
@@ -848,7 +865,26 @@ const ProfilePage = () => {
                                                                 : null}
                                                         </div>
                                                     </section>
+                                                    {
+                                                        collectedNftList.length > 0 ?
+                                                            <>
+                                                                {
+                                                                    collectionLength === collectedNftList.length ? '' :
+                                                                        <div className="row">
+                                                                            <div className="col-12 text-center mt-4">
+                                                                                <button type="button" className="btn btn-outline border-gradient px-6" onClick={handleSetLimitCollected}>
+                                                                                    <span><i className="ri-loader-4-fill"></i> Load More</span>
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                }
+                                                            </>
+
+                                                            :
+                                                            ''
+                                                    }
                                                 </div>
+
                                             </div>
                                         </div>
                                     </div>
@@ -869,10 +905,10 @@ const ProfilePage = () => {
                                             <div className="d-flex-center filter-right-cate grid-view-tabs">
                                                 <ul className="nav icon-tabs">
                                                     <li>
-                                                        <Link className="btn active" data-bs-toggle="tab" to="#view-grid"><i className="ri-grid-fill"></i></Link>
+                                                        <Link className="btn active" data-bs-toggle="tab" to="#view-grid2"><i className="ri-grid-fill"></i></Link>
                                                     </li>
                                                     <li>
-                                                        <Link className="btn" data-bs-toggle="tab" to="#view-list"><i className="ri-layout-2-fill"></i></Link>
+                                                        <Link className="btn" data-bs-toggle="tab" to="#view-list2"><i className="ri-layout-2-fill"></i></Link>
                                                     </li>
                                                 </ul>
                                             </div>
@@ -1064,7 +1100,6 @@ const ProfilePage = () => {
                                                         </div>
                                                     </div>
                                                 </div>
-
                                                 <div className="filter-custom-item">
                                                     <h4 className="accordion-button" data-bs-toggle="collapse" data-bs-target="#Currency_acc">
                                                         Currency
@@ -1092,43 +1127,30 @@ const ProfilePage = () => {
 
                                         {/* Created Data List */}
                                         <div className="side_main_panel">
-
                                             <div className="iterfsh profile_iterfsh">
                                                 <Link to="#" className=""> {/*  <i className="ri-refresh-line me-2"></i> Updated 18m ago */} </Link>
                                                 <h5>{createdNftData.length} Items</h5>
                                             </div>
                                             <div className="tab-content author-tabs-content">
-                                                <div id="view-grid" className="tab-pane fade show active">
+                                                <div id="view-grid2" className="tab-pane fade show active">
                                                     <section className="explore_view">
                                                         <div className="itemas_view grid-container">
-                                                            {/* created Data */}
-
                                                             {
                                                                 createdNftData.length > 0
                                                                     ? createdNftData.map((item) => (
                                                                         <>
-
                                                                             <div className="grid_iteam">
                                                                                 <div className="explore-style-one explore-style-overlay border-gradient">
                                                                                     <div className="thumb">
                                                                                         <Link tonClick={() => linkFollow(item)} className="ratio ratio-1x1" >
-
                                                                                             {
                                                                                                 !item?.file ?
                                                                                                     <img src="images/explore/13.jpg" alt="nft live auction thumbnail" />
                                                                                                     :
                                                                                                     <img src={`${ApiConfig.baseUrl + item?.file}`} className="" />
-
                                                                                             }
-
-
                                                                                         </Link>
-
-                                                                                        {/* <!-- End .count-down --> */}
-
-                                                                                        {/* <!-- End .reaction-count --> */}
                                                                                     </div>
-                                                                                    {/* <!-- End .thumb --> */}
                                                                                     <div className="content px-4">
                                                                                         <div className="d-flex-between align-items-center pt-4">
                                                                                             <div>
@@ -1139,14 +1161,13 @@ const ProfilePage = () => {
                                                                                             <span className="biding-price d-flex-center text-white"> {item?.token_id} </span>
                                                                                         </div>
                                                                                         <hr />
-                                                                                        {/* <!-- End .product-owner --> */}
                                                                                         <div className="action-wrapper d-flex-between border-0 pb-4">
                                                                                             <span className="biding-price d-flex-center  text-white">Asking Price</span>
                                                                                             <span className="biding-price d-flex-center  text-white">{item?.price}</span>
                                                                                         </div>
                                                                                     </div>
                                                                                     <Link className="btn  btn-block btn-gradient w-100 text-center btn-small" onClick={() => linkFollow(item)}
-                                                                                    ><span> Drtails</span>
+                                                                                    ><span> Details</span>
                                                                                     </Link>
                                                                                 </div>
                                                                             </div>
@@ -1155,144 +1176,88 @@ const ProfilePage = () => {
                                                                     : null}
                                                         </div>
                                                     </section>
+                                                    {
+                                                        createdNftData.length > 0 ?
+                                                            <>
+                                                                {
+                                                                    createdLength === createdNftData.length ? '' :
+                                                                        <div className="row">
+                                                                            <div className="col-12 text-center mt-4">
+                                                                                <button type="button" className="btn btn-outline border-gradient px-6" onClick={handleSetLimitCreated}>
+                                                                                    <span><i className="ri-loader-4-fill"></i> Load More</span>
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                }
+                                                            </>
+                                                            :
+                                                            ''
+                                                    }
                                                 </div>
-                                                <div id="view-list" className="tab-pane fade">
+
+                                                <div id="view-list2" className="tab-pane fade">
                                                     <section className="explore_view">
                                                         <div className="itemas_view grid-container grid-view-two">
-                                                            <div className="grid_iteam">
-                                                                <div className="explore-style-one explore-style-overlay border-gradient">
-                                                                    <div className="thumb">
-                                                                        <Link to="/nft_details"><img src="images/explore/13.jpg"
-                                                                            alt="nft live auction thumbnail" /></Link>
-                                                                    </div>
-                                                                    <div className="content px-4">
-                                                                        <div className="d-flex-between align-items-center pt-4">
-                                                                            <div>
-                                                                                <div className="header d-flex-between">
-                                                                                    <h3 className="title"><Link to="/nft_details">God Watching</Link></h3>
+                                                            {
+                                                                createdNftData.length > 0
+                                                                    ? createdNftData.map((item) => (
+                                                                        <>
+                                                                            <div className="grid_iteam">
+                                                                                <div className="explore-style-one explore-style-overlay border-gradient">
+                                                                                    <div className="thumb">
+                                                                                        <Link tonClick={() => linkFollow(item)} className="ratio ratio-1x1" >
+                                                                                            {
+                                                                                                !item?.file ?
+                                                                                                    <img src="images/explore/13.jpg" alt="nft live auction thumbnail" />
+                                                                                                    :
+                                                                                                    <img src={`${ApiConfig.baseUrl + item?.file}`} className="" />
+                                                                                            }
+                                                                                        </Link>
+                                                                                    </div>
+                                                                                    <div className="content px-4">
+                                                                                        <div className="d-flex-between align-items-center pt-4">
+                                                                                            <div>
+                                                                                                <div className="header d-flex-between">
+                                                                                                    <h3 className="title"><Link onClick={() => linkFollow(item)}>{item?.name}</Link></h3>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <span className="biding-price d-flex-center text-white"> {item?.token_id} </span>
+                                                                                        </div>
+                                                                                        <hr />
+                                                                                        <div className="action-wrapper d-flex-between border-0 pb-4">
+                                                                                            <span className="biding-price d-flex-center  text-white">Asking Price</span>
+                                                                                            <span className="biding-price d-flex-center  text-white">{item?.price}</span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <Link className="btn  btn-block btn-gradient w-100 text-center btn-small" onClick={() => linkFollow(item)}
+                                                                                    ><span> Details</span>
+                                                                                    </Link>
                                                                                 </div>
                                                                             </div>
-                                                                            <span className="biding-price d-flex-center text-white"> #556 </span>
-                                                                        </div>
-                                                                        <hr />
-                                                                        <div className="action-wrapper d-flex-between border-0 pb-4">
-                                                                            <span className="biding-price d-flex-center  text-white">Asking Price</span>
-                                                                            <span className="biding-price d-flex-center  text-white">$ 2.055</span>
-                                                                        </div>
-                                                                    </div>
-                                                                    <Link onClick={() => linkFollow()} className="btn  btn-block btn-gradient w-100 text-center btn-small"><span> Sell Now </span> </Link>
-                                                                </div>
-                                                            </div>
-                                                            <div className="grid_iteam">
-                                                                <div className="explore-style-one explore-style-overlay border-gradient">
-                                                                    <div className="thumb">
-                                                                        <Link to="/nft_details"><img src="images/explore/13.jpg"
-                                                                            alt="nft live auction thumbnail" /></Link>
-                                                                    </div>
-                                                                    <div className="content px-4">
-                                                                        <div className="d-flex-between align-items-center pt-4">
-                                                                            <div>
-                                                                                <div className="header d-flex-between">
-                                                                                    <h3 className="title"><Link to="/nft_details">God Watching</Link></h3>
-                                                                                </div>
-                                                                            </div>
-                                                                            <span className="biding-price d-flex-center text-white"> #556 </span>
-                                                                        </div>
-                                                                        <hr />
-                                                                        <div className="action-wrapper d-flex-between border-0 pb-4">
-                                                                            <span className="biding-price d-flex-center  text-white">Asking Price</span>
-                                                                            <span className="biding-price d-flex-center  text-white">$ 2.055</span>
-                                                                        </div>
-                                                                    </div>
-                                                                    <Link onClick={() => linkFollow()} className="btn  btn-block btn-gradient w-100 text-center btn-small" >
-                                                                        <span> Sell Now </span>
-                                                                    </Link>
-                                                                    {/* <!-- End .content --> */}
-                                                                </div>
-                                                            </div>
-                                                            <div className="grid_iteam">
-                                                                <div className="explore-style-one explore-style-overlay border-gradient">
-                                                                    <div className="thumb">
-                                                                        <Link to="/nft_details"><img src="images/explore/13.jpg"
-                                                                            alt="nft live auction thumbnail" /></Link>
-
-                                                                        {/* <!-- End .count-down --> */}
-
-                                                                        {/* <!-- End .reaction-count --> */}
-                                                                    </div>
-                                                                    {/* <!-- End .thumb --> */}
-                                                                    <div className="content px-4">
-                                                                        <div className="d-flex-between align-items-center pt-4">
-                                                                            <div>
-                                                                                <div className="header d-flex-between">
-                                                                                    <h3 className="title"><Link to="/nft_details">God Watching</Link></h3>
-                                                                                </div>
-                                                                            </div>
-                                                                            <span className="biding-price d-flex-center text-white"> #556 </span>
-                                                                        </div>
-                                                                        <hr />
-                                                                        {/* <!-- End .product-owner --> */}
-                                                                        <div className="action-wrapper d-flex-between border-0 pb-4">
-                                                                            <span className="biding-price d-flex-center  text-white">Asking Price</span>
-                                                                            <span className="biding-price d-flex-center  text-white">$ 2.055</span>
-                                                                        </div>
-
-                                                                        {/* <!-- action-wrapper --> */}
-                                                                    </div>
-                                                                    <Link to="#"
-                                                                        onClick={() => linkFollow()}
-                                                                        // data-bs-toggle="modal" data-bs-target="#checkout_modal"
-                                                                        className="btn  btn-block btn-gradient w-100 text-center btn-small"
-                                                                    ><span> Sell Now </span>
-                                                                    </Link>
-                                                                    {/* <!-- End .content --> */}
-                                                                </div>
-                                                            </div>
-                                                            <div className="grid_iteam">
-                                                                <div className="explore-style-one explore-style-overlay border-gradient">
-                                                                    <div className="thumb">
-                                                                        <Link to="/nft_details"><img src="images/explore/13.jpg"
-                                                                            alt="nft live auction thumbnail" /></Link>
-
-                                                                        {/* <!-- End .count-down --> */}
-
-                                                                        {/* <!-- End .reaction-count --> */}
-                                                                    </div>
-                                                                    {/* <!-- End .thumb --> */}
-                                                                    <div className="content px-4">
-                                                                        <div className="d-flex-between align-items-center pt-4">
-                                                                            <div>
-                                                                                <div className="header d-flex-between">
-                                                                                    <h3 className="title"><Link to="/nft_details">God Watching</Link></h3>
-                                                                                </div>
-                                                                            </div>
-                                                                            <span className="biding-price d-flex-center text-white"> #556 </span>
-                                                                        </div>
-                                                                        <hr />
-                                                                        {/* <!-- End .product-owner --> */}
-                                                                        <div className="action-wrapper d-flex-between border-0 pb-4">
-                                                                            <span className="biding-price d-flex-center  text-white">Asking Price</span>
-                                                                            <span className="biding-price d-flex-center  text-white">$ 2.055</span>
-                                                                        </div>
-
-                                                                        {/* <!-- action-wrapper --> */}
-                                                                    </div>
-                                                                    <Link to="#"
-                                                                        onClick={() => linkFollow()}
-                                                                        // data-bs-toggle="modal" data-bs-target="#checkout_modal"
-                                                                        className="btn  btn-block btn-gradient w-100 text-center btn-small"
-                                                                    ><span> Sell Now </span>
-                                                                    </Link>
-                                                                    {/* <!-- End .content --> */}
-                                                                </div>
-                                                            </div>
+                                                                        </>
+                                                                    ))
+                                                                    : null}
                                                         </div>
-
                                                     </section>
+                                                    {
+                                                        createdNftData.length > 0 ?
+                                                            <>
+                                                                {
+                                                                    createdLength === createdNftData.length ? '' :
+                                                                        <div className="row">
+                                                                            <div className="col-12 text-center mt-4">
+                                                                                <button type="button" className="btn btn-outline border-gradient px-6" onClick={handleSetLimitCreated}>
+                                                                                    <span><i className="ri-loader-4-fill"></i> Load More</span>
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                }
+                                                            </>
+                                                            :
+                                                            ''
+                                                    }
                                                 </div>
-
                                             </div>
-
                                         </div>
                                     </div>
                                 </div>
@@ -1367,40 +1332,25 @@ const ProfilePage = () => {
                                                                                             </span>
                                                                                         </div>
                                                                                         <div className="content">
-                                                                                            <p className="title mb-0">{item?.name}
-                                                                                                {/* <img src="images/verified.png" className="img-fluid verify_img" /> */}
-                                                                                            </p>
+                                                                                            <p className="title mb-0">{item?.name}</p>
                                                                                         </div>
                                                                                     </div>
                                                                                 </div>
                                                                             </label>
-                                                                            {/* <span>9,998</span> */}
                                                                             <input className="form-check-input" type="checkbox" id="on-thumb1" value={collectionEventId} onChange={() => setCollctionEventId(item?._id)} onClick={() => (handleActivityLOgs(salesEvent, rentEvent, buyEvent, offerEvent, collectionEventId))} />
                                                                         </div>
                                                                     ))
-                                                                    : null}
+                                                                    : null
+                                                            }
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="side_main_panel">
-                                            {/* <div className="iterfsh profile_iterfsh">
-                                                <div className="itfrsh_start">
-                                                    <Link className="btn-sm btn-outline border-gradient me-2">
-                                                        <span>Sales <i className="ri-close-line ms-1 pe-0"></i></span>
-                                                    </Link>
-                                                    <Link to="#" className="text-white"> Clear all </Link>
-                                                </div>
-                                                <div className="filter-select-option border-gradient">
-                                                    <Select options={optionsActivity} />
-                                                </div>
-                                            </div> */}
                                             <div className="list_card border-gradient mb-4">
                                                 <div className="list-header position-relative">
                                                     <div className="py-5 text-center">
-                                                        {/* <LineChart data={data} /> */}
-
                                                         <BarChart data={data} />
                                                     </div>
                                                 </div>
@@ -1437,12 +1387,9 @@ const ProfilePage = () => {
                                                                                             <img src={`${ApiConfig.baseUrl + item?.item_details?.file}`} alt="top sellter" />
                                                                                         </Link>
                                                                                     </div>
-                                                                                    {/* <!-- End .thumb-wrapper --> */}
                                                                                     <div className="content">
                                                                                         <p className="title mb-0  pb-1"><Link to="#">{item?.transferred_from?.username}</Link></p>
                                                                                     </div>
-
-                                                                                    {/* <!-- End .content --> */}
                                                                                 </div>
                                                                             </td>
                                                                             <td>
@@ -1497,15 +1444,12 @@ const ProfilePage = () => {
                                                                             <img src={`${ApiConfig.baseUrl + item?.logo}`} alt="top sellter" className="" />
                                                                         </Link>
                                                                     </div>
-                                                                    {/* <!-- End .thumb-wrapper --> */}
                                                                     <div className="content">
                                                                         <p className="title mb-0 "><Link to="#">{item?.name}
                                                                             {/* <img src="images/verified.png" className="img-fluid verify_img" /> */}
                                                                         </Link>
                                                                         </p>
                                                                     </div>
-
-                                                                    {/* <!-- End .content --> */}
                                                                 </div>
                                                             </td>
                                                             <td>0</td>
@@ -1528,30 +1472,51 @@ const ProfilePage = () => {
                         </div>
                     </section>
                 </div>
+
                 <div className="modal fade" id="yesnoalertmodal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="yesnoalertmodallabel" aria-hidden="true">
                     <div className="modal-dialog modal-dialog-centered">
                         <div className="modal-content">
-                            <div className="modal-header no-border flex-column px-8">
-                                <h3 className="modal-title" id="yesnoalertmodallabel"> Already you have a decentralized wallet? </h3>
-                                <button type="button" className="btn-custom-closer" data-bs-dismiss="modal" aria-label="Close"><i
-                                    className="ri-close-fill"></i></button>
-                            </div>
-                            <div className="modal-footer no-border px-8 pb-5">
-                                <div className="d-flex align-items-center w-100 justify-content-center" >
-                                    <div className="btn  btn-gradient btn-border-gradient connect_wallet_btn w-100 me-3" >
-                                        <ConnectButton showBalance={false} />
-                                    </div>
-                                    <button type="button" className="btn btn-gradient w-100 btn-block  btn-border-gradient justify-content-center w-100" onClick={handleWalletAddressCoustom}>
-                                        <span>NO</span>
-                                    </button>
-                                </div>
+
+                            <div className="modal-body" >
+                                {
+                                    hideModel === 'false' ?
+                                        <>
+                                            <div className="modal-header no-border px-12">
+                                                <h3 className="modal-title" id="yesnoalertmodallabel">
+                                                    Welcome to Battle Infinity!
+                                                    <br />
+                                                    If you have a Wallet (MetaMask, Trust Wallet), please connect using "Connect Wallet".
+                                                    <br />
+                                                    If you don't have a wallet, choose "No" and we will create one private wallet for you! </h3>
+                                                <button type="button" className="btn-custom-closer" data-bs-dismiss="modal" aria-label="Close"><i
+                                                    className="ri-close-fill"></i></button>
+                                            </div>
+                                            <div className="d-flex align-items-center w-100 justify-content-center mb-5" >
+                                                <div className="btn  btn-gradient btn-border-gradient connect_wallet_btn w-100 me-3" >
+                                                    <ConnectButton showBalance={false} />
+                                                </div>
+                                                <button type="button" className="btn w-100 btn-block  btn-border-gradient justify-content-center w-100" onClick={handleWalletAddressCoustom}  >
+                                                    <span>NO</span>
+                                                </button>
+                                            </div>
+                                        </>
+                                        :
+                                        <form action="#" className=" px-4" >
+                                            <div class="form-group mb-5 mt-5">
+                                                <h3 className="mb-2">Please Create a New Password</h3>
+                                                <input type="password" class="form-control" placeholder="Enter Your Password" aria-label="f-name" aria-describedby="basic-addon2" name="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                                            </div>
+                                            <button type="button" class="btn btn-gradient btn-border-gradient w-100 justify-content-center mb-4" onClick={() => handleUpdatePassword(password)}>
+                                                <span>UPDATE PASSWORD</span></button>
+                                        </form>
+                                }
                             </div>
                         </div>
                     </div>
                 </div>
             </>
             :
-            <NftDetails userid={[userData, activeScreen]} />
+            <NftDetails userid={[userData, activeScreen, collectedUserType]} />
     )
 }
 

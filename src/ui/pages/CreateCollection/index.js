@@ -20,7 +20,18 @@ const CreateCollection = () => {
     const [userDetails, setUserDetails] = useState([])
 
     const [categoryList, setCategoryList] = useState([])
+    const [logoImage, setLogoImage] = useState('');
+    const [featuredImage, setFeaturedImage] = useState('');
+    const [bannerImage, setBannerImage] = useState('');
+    const [name, setName] = useState('');
+    const [url, setUrl] = useState('');
+    const [description, setDescription] = useState('');
+    const [category, setCategory] = useState('');
+    const [walletNetwork, setWalletNetwork] = useState('ART');
+    const [tokens, setTokens] = useState('BNB');
+    const [tokenType, setTokenType] = useState('BNB');
 
+    console.log(category, 'category');
 
     const handleuserProfile = async () => {
         await AuthService.getUserDetails().then(async result => {
@@ -69,19 +80,10 @@ const CreateCollection = () => {
         messagesEndRef?.current?.scrollIntoView(true)
     }
 
-    const [logoImage, setLogoImage] = useState('');
-    const [featuredImage, setFeaturedImage] = useState('');
-    const [bannerImage, setBannerImage] = useState('');
-    const [name, setName] = useState('');
-    const [url, setUrl] = useState('');
-    const [description, setDescription] = useState('');
-    const [category, setCategory] = useState('art');
-    const [walletNetwork, setWalletNetwork] = useState('');
-    const [tokens, setTokens] = useState('BNB');
-    const [tokenType, setTokenType] = useState('BNB');
 
 
-    const handleResetInput = () => {       
+
+    const handleResetInput = () => {
         setName("");
         setUrl("");
         setDescription("");
@@ -217,9 +219,6 @@ const CreateCollection = () => {
         });
     }
 
-    console.log(bannerImage, 'bannerImage');
-
-
     return (
         <>
             <div className="page_wrapper create_form" >
@@ -313,9 +312,10 @@ const CreateCollection = () => {
                                     <div className="col-lg-12" >
                                         <div class="field-box form-group">
                                             <label for="name" class="up_label">Category <em className="text-danger" >*</em> </label>
+
                                             <span>Adding a category will help make your item discoverable</span>
                                             <select className="form-select" value={category} onChange={(event) => setCategory(event.target.value)}>
-                                            {/* <option value='art'> Art </option> */}
+                                                <option>Please Select Category</option>
 
                                                 {categoryList.length > 0
                                                     ? categoryList.map((item) => (
@@ -326,7 +326,13 @@ const CreateCollection = () => {
 
                                                     : null}
                                             </select>
+                                            {
+                                                !category ?
 
+                                                    <span className="text-danger mt-2" >Please Select Category</span>
+                                                    :
+                                                    null
+                                            }
                                         </div>
                                     </div>
                                     <div className="col-lg-12" >
@@ -359,12 +365,12 @@ const CreateCollection = () => {
                                             <span>These tokens can be used to buy and sell your items.</span>
                                             <select className="form-select" value={tokens} onChange={(event) => setTokens(event.target.value)}>
                                                 <option value='BNB'> BNB </option>
-                                    
+
                                             </select>
                                         </div>
                                     </div>
                                     <div className="col-lg-12" >
-                                        <button type="button" class="btn btn-gradient btn-border-gradient px-5 btn-block w-100" onClick={() => handleCreateCollection(name, url, description, category, walletNetwork, tokenType, tokens)}>
+                                        <button type="button" class="btn btn-gradient btn-border-gradient px-5 btn-block w-100" onClick={() => handleCreateCollection(name, url, description, category, walletNetwork, tokenType, tokens)} disabled={!category}>
                                             <span class="d-block w-100 text-center">CREATE COLLECTION</span>
                                         </button>
                                     </div>

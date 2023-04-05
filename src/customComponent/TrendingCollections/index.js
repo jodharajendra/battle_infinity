@@ -8,7 +8,7 @@ import { ApiConfig } from "../../api/apiConfig/apiConfig";
 
 const TrendingCollections = () => {
 
- 
+
     const [collectionDataTrending, setCollectionDataTrending] = useState([]);
 
 
@@ -61,7 +61,7 @@ const TrendingCollections = () => {
         mycollections();
     }, []);
 
-let dataLIMIT = +4
+    let dataLIMIT = +10
 
     const mycollections = async () => {
         await AuthService.mycollections1(dataLIMIT).then(async result => {
@@ -74,75 +74,46 @@ let dataLIMIT = +4
         });
     }
 
-  
-
-    const handleProceed = (id) => {
-        window.location.replace(`collection_details?id=${id}`);
-    };
-
     return (
-        <>
-            {/* < !--Start Popular Collection-- > */}
-            <section className="section-bg-separation-2 ptb-120">
-                <div className="container">
-                    <div className="section-title">
-                        <h2>Trending Collections</h2>
-                    </div>
-                    <div className="slider popular-collection-active slick-gutter-15 slick-arrow-between">
-                        <Slider {...settingstwo}>
-
-                            {collectionDataTrending.length > 0
-                                ? collectionDataTrending.map((item) => (
-                                    <>
-                                        <div className="popular-collection-style-one border-gradient">
-                                            <Link onClick={() => handleProceed(item?.id)}  >
-                                                {item?.collection_details?.banner_image ? <img src="images/collection/tc_1.png" alt="popular collection" /> :
-                                                    <div className="large-thumbnail ratio ratio-16x9"> <img src={`${ApiConfig.baseUrl + item?.collection_details?.banner_image}`} /></div>
-                                                }
-                                            </Link>
-                                            <div className="content content-flex p-4">
-                                                {!item?.collection_details?.logo ? <img src="images/popular/small/2.png" className="avatar avatar_72" alt="history" /> :
-                                                    <Link to="#" className="avatar avatar_72" tabindex="0">
-                                                        <img src={`${ApiConfig.baseUrl + item?.collection_details?.logo}`} className="img-fluid" />
+        <section className="section-bg-separation-2 ptb-120">
+            <div className="container">
+                <div className="section-title">
+                    <h2>Trending Collections</h2>
+                </div>
+                <div className="slider popular-collection-active slick-gutter-15 slick-arrow-between">
+                    <Slider {...settingstwo}>
+                        {collectionDataTrending.length > 0
+                            ? collectionDataTrending.map((item) => (
+                                <>
+                                    <div className="popular-collection-style-one border-gradient">
+                                        <Link to={`collection_details?id=${item?.collection_details?._id}`}  >
+                                            {item?.collection_details?.banner_image ? <img src="images/collection/tc_1.png" alt="popular collection" /> :
+                                                <div className="large-thumbnail ratio ratio-16x9"> <img src={`${ApiConfig.baseUrl + item?.collection_details?.banner_image}`} /></div>
+                                            }
+                                        </Link>
+                                        <div className="content content-flex p-4">
+                                            {!item?.collection_details?.logo ? <img src="images/popular/small/2.png" className="avatar avatar_72" alt="history" /> :
+                                                <Link to="#" className="avatar avatar_72" tabindex="0">
+                                                    <img src={`${ApiConfig.baseUrl + item?.collection_details?.logo}`} className="img-fluid" />
+                                                </Link>
+                                            }
+                                            <div className="inner">
+                                                <h4 className="title ">
+                                                    <Link className="d-flex align-items-center" to={`collection_details?id=${item?.collection_details?._id}`}>
+                                                        {item?.collection_details?.name}
                                                     </Link>
-                                                }
-                                                <div className="inner">
-                                                    <h4 className="title ">
-                                                        <Link className="d-flex align-items-center" onClick={() => handleProceed(item?.id)}>
-                                                            {item?.collection_details?.name}
-                                                            {/* <img src="images/verified.png" className="img-fluid verify_img" /> */}
-                                                        </Link>
-                                                    </h4>
-                                                    <span><Link to="/profile" className="text-secondry">{item?.collection_details?.name}</Link></span>
-                                                </div>
+                                                </h4>
+                                                <span><Link to={`collection_details?id=${item?.collection_details?._id}`} className="text-secondry">{item?.collection_details?.name}</Link></span>
                                             </div>
                                         </div>
-                                    </>
-
-                                ))
-                                : null}
-
-                        </Slider>
-                    </div>
+                                    </div>
+                                </>
+                            ))
+                            : null}
+                    </Slider>
                 </div>
-            </section>
-            {/* <!-- Start Popular Collection --> */}
-
-
-
-            {/* {collectionData.length > 0
-                ? collectionData.map((item) => (
-
-                    'cv'
-
-
-
-                ))
-                : null} */}
-
-
-        </>
+            </div>
+        </section>
     )
 }
-
 export default TrendingCollections;

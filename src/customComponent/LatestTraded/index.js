@@ -1,45 +1,67 @@
 import React, { useEffect, useState, useContext, useRef } from "react";
 import AuthService from "../../api/services/AuthService";
 import { ApiConfig } from "../../api/apiConfig/apiConfig";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import LoaderHelper from "../Loading/LoaderHelper";
+import { alertErrorMessage } from "../../customComponent/CustomAlertMessage";
+
 
 const LatestTraded = () => {
+    const accessToken = localStorage.getItem("accessToken");
+    const navigate = useNavigate();
+
+
     useEffect(() => {
         mycollectionsNew();
     }, []);
 
     const [collectionDataLatest, setCollectionDataLatest] = useState([]);
-    const [collectionDataPopular, setCollectionDataPopular] = useState([]);
+    const [collectionLength, setCollectionLength] = useState([]);
+    const [newNftDetailsData, setNewNftDetailsData] = useState([]);
 
-    let dataLIMIT = +4
+    const [clicks, setClicks] = useState(4);
 
     const mycollectionsNew = async () => {
-        await AuthService.mycollections1(dataLIMIT).then(async result => {
+        // LoaderHelper.loaderStatus(true);
+        await AuthService.mycollections1(clicks).then(async result => {
             if (result.success) {
+                LoaderHelper.loaderStatus(false);
+                setClicks(clicks + 4);
                 setCollectionDataLatest(result?.data?.latest_traded?.data.reverse());
-                setCollectionDataPopular(result?.data?.popular.reverse());
-                // alertSuccessMessage(result?.message);
-            } else {
-                // alertErrorMessage(result?.message);
+                setCollectionLength(result?.data?.latest_traded?.total);
+            }
+            else {
+                LoaderHelper.loaderStatus(false);
             }
         });
     }
-    let dataLIMITNew = +8
 
-    const mycollectionsLoadMore = async () => {
-        await AuthService.mycollections1(dataLIMITNew).then(async result => {
+
+
+   
+
+
+    const handleNftDetails = async (nftID) => {
+        await AuthService.getNftDetails(nftID).then(async result => {
             if (result.success) {
-                setCollectionDataLatest(result?.data?.latest_traded?.data.reverse());
-                setCollectionDataPopular(result?.data?.popular.reverse());
-                // alertSuccessMessage(result?.message);
+                try {
+                    setNewNftDetailsData(result?.data)
+                    nextPageLatest(result?.data);
+                } catch (error) {
+                    alertErrorMessage(result.message);
+                }
             } else {
-                // alertErrorMessage(result?.message);
+                alertErrorMessage(result.message);
             }
         });
     }
+
+    const nextPageLatest = (data) => {
+        navigate('/latest_trade', { state: data });
+      };
+
 
     return (
-
         <section className="ptb-100 live-auction">
             <div className="container">
                 <div className="section-title">
@@ -51,7 +73,11 @@ const LatestTraded = () => {
                             <div className="col-xxl-3 col-xl-4 col-lg-4 col-md-6  mb-6">
                                 <div className="explore-style-one explore-style-overlay border-gradient">
                                     <div className="thumb">
-                                        <Link to="#"><img src={`${ApiConfig.baseUrl + item?.nft_details?.file}`} alt="nft live auction thumbnail" /></Link>
+                                        <Link to="#">
+                                            <div className="ratio ratio-1x1" >
+                                                <img src={`${ApiConfig.baseUrl + item?.nft_details?.file}`} alt="nft live auction thumbnail" />
+                                            </div>
+                                        </Link>
                                     </div>
                                     <div className="content px-4">
                                         <div className="d-flex-between align-items-center" >
@@ -66,19 +92,31 @@ const LatestTraded = () => {
                                             </div>
                                             <span className="biding-price d-flex-center text-white">{item?.nft_details?.price} </span>
                                         </div>
-                                        <hr />
                                     </div>
-                                    <Link to="/profile" className="btn  btn-block btn-gradient w-100 text-center btn-small"><span> Rent now </span> </Link>
+                                    <Link onClick={() => handleNftDetails(item?.nft_details?._id)} className="btn  btn-block btn-gradient w-100 text-center btn-small"><span>NFT Detail </span> </Link>
                                 </div>
                             </div>
                         ))
                         : null}
                 </div>
-                <div className="row">
-                    <div className="col-12 text-center mt-4">
-                        <Link to="#" className="btn btn-outline border-gradient px-8" onClick={mycollectionsLoadMore}><span><i className="ri-loader-4-fill"></i> Load More</span></Link>
-                    </div>
-                </div>
+                {
+                    collectionDataLatest.length > 0 ?
+
+                        <>
+                            {
+                                collectionLength === collectionDataLatest.length ? '' :
+                                    <div className="row">
+                                        <div className="col-12 text-center mt-4">
+                                            <Link to="#" className="btn btn-outline border-gradient px-8" onClick={mycollectionsNew}><span><i className="ri-loader-4-fill"></i> Load More</span></Link>
+                                        </div>
+                                    </div>
+                            }
+                        </>
+
+                        :
+                        ''
+                }
+
             </div>
         </section>
 

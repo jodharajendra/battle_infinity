@@ -10,7 +10,6 @@ export const ApiConfig = {
   UserProfile: 'profile',
   tokenRefresh: 'refresh-token',
   updateAddress: 'update-address',
-  updateAddressCoustam: 'update-address',
   allnftCreated: 'nft/created',
   subscribe: 'subscribe',
   updatePrfile: 'update-profile',
@@ -37,10 +36,16 @@ export const ApiConfig = {
   nftReports:'report',
   activityReports:'activity-logs',
   collectionFavourite:'collections/favourites',
- 
   favouriteUpdate:'collections/update-favourite',
   updateFavouriteState:'collections/update-favourite',
   createdBundle:'nft/create-bundle',
+  createWallet:'wallet/create-wallet',
+  updateCenterlized:'user/update-address',
+  walletData:'wallet/user-wallet',
+
+
+
+
   // ============URLs================
   baseUrl: `${appUrl}/`,
   baseUser: `${appUrl}/user/`,

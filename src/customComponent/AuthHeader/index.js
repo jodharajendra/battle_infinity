@@ -9,15 +9,17 @@ import { alertErrorMessage, alertSuccessMessage } from "../../customComponent/Cu
 import { ApiConfig } from "../../api/apiConfig/apiConfig";
 
 const AuthHeader = () => {
-  const { address, isConnecting, isDisconnected } = useAccount()
+
   const [profileState, updateProfileState] = useContext(ProfileContext);
-  const walletAddress = localStorage.getItem("wallet_address");
   const [logoImage, setLogoImage] = useState("");
   const [searchDetailData, setSearchDetailData] = useState("");
   const [searchDataList, setSearchDataList] = useState("");
   const navigate = useNavigate();
   const messagesEndRef = useRef(null)
   const [profileWallet, setProfileWallet] = useState([]);
+
+  const [profileDetails, setProfileDetails] = useState([]);
+
 
   function hideMenu() {
     let tab = document.getElementById("qwert");
@@ -54,6 +56,10 @@ const AuthHeader = () => {
         try {
           setLogoImage(result?.data?.logo);
           setProfileWallet(result?.data?.wallet_address)
+          if (result?.data?.type === "centralized") {
+            handleCenterlizedWalletData();
+          }
+          setProfileDetails(result?.data?.type)
         } catch (error) {
         }
       } else {
@@ -81,10 +87,10 @@ const AuthHeader = () => {
   }
 
 
+
   const handleusergetDetailsSearch = async (searchDetailData) => {
     await AuthService.getSearchDetails(searchDetailData).then(async result => {
       if (result.success) {
-        console.log(result, 'resultR');
         try {
           setSearchDataList(result?.data);
           nextPage(result?.data);
@@ -107,7 +113,25 @@ const AuthHeader = () => {
   };
 
 
-  console.log(profileWallet, 'profileWallet');
+  const [centerlizedData, setCenterlizedData] = useState([])
+
+
+
+  const handleCenterlizedWalletData = async () => {
+    await AuthService.getCenterlizedWalletData().then(async result => {
+      if (result.success) {
+        setCenterlizedData(result?.data)
+      }
+    });
+  }
+
+  const { address, isConnecting, isDisconnected } = useAccount()
+
+  const handleCenterLogout = async () => {
+    alertErrorMessage('Please Disconnect Your Metamask From Browser')
+
+  }
+
 
   return (
     <>
@@ -166,36 +190,49 @@ const AuthHeader = () => {
                 </Link>
                   <ul className="submenu">
                     <li><Link to="/profile"><i className="ri-user-line"></i> Profile</Link></li>
-                    <li><Link to="my_collection"><i className="ri-layout-grid-line"></i>My Collection</Link></li>
+                    <li><Link to="/my_collection"><i className="ri-layout-grid-line"></i>My Collection</Link></li>
                     <li><Link to="new_nft"><i className="ri-edit-line"></i> Create NFT</Link></li>
-                    <li><Link to="/new_bundle"><i class="ri-layout-grid-fill"></i> Create Bundels</Link></li>
-                    <li><Link to="/settings"><i class="ri-settings-line"></i> Settings</Link></li>
+                    <li><Link to="/new_bundle"><i class="ri-layout-grid-fill"></i> Create Bundle</Link></li>
+                    <li><Link to="/update_profile"><i class="ri-settings-line"></i> Settings</Link></li>
                     <li><Link to="/notifications"><i class="ri-notification-4-line"></i> Notifications</Link></li>
-                    <li><Link style={{ cursor: 'pointer' }} onClick={() => handleLogOut()}> <i class="ri-shut-down-line"></i> Logout</Link></li>
+                    {
+                      profileDetails === 'centralized' ?
+                        <li><Link to="" data-bs-toggle="modal" data-bs-target="#depostwalletmodal"><i class="ri-wallet-line"></i> Deposit Wallet </Link></li>
+                        :
+                        ''
+                    }
+
+                    <li>
+
+                    <Link style={{ cursor: 'pointer' }} onClick={() => handleLogOut()}> <i class="ri-shut-down-line"></i> Logout</Link>
+
+
+                      {/* {
+                        address ?
+                          <Link style={{ cursor: 'pointer' }} onClick={handleCenterLogout}> <i class="ri-shut-down-line"></i> Logout</Link>
+                          :
+                          <Link style={{ cursor: 'pointer' }} onClick={() => handleLogOut()}> <i class="ri-shut-down-line"></i> Logout</Link>
+                      } */}
+                    </li>
                   </ul>
                 </li>
 
-
-
                 {
-                  walletAddress === '0xC1fEec289C4110A103F7A3F759cFA7a61d18a173' || profileWallet === '0xC1fEec289C4110A103F7A3F759cFA7a61d18a173' ? ''
+                  profileDetails === 'centralized' ? ''
                     :
-
                     <li className="wallet-button " >
                       <button className="btn btn-gradient btn-border-gradient">
                         <ConnectButton showBalance={false} />
-
                       </button>
                     </li>
                 }
-
-
 
                 <li className="setting-option mobile-menu-bar d-block d-xl-none">
                   <button className="hamberger-button" onClick={() => showMenu()} >
                     <i className="ri-menu-2-fill"></i>
                   </button>
                 </li>
+
               </ul>
             </div>
           </div>
@@ -227,6 +264,42 @@ const AuthHeader = () => {
           </nav>
         </div>
       </div>
+
+
+
+
+      {/* qr code modal */}
+      <div className="modal fade" id="depostwalletmodal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="depostwalletmodallabel" aria-hidden="true">
+        <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-content">
+            <div className="modal-header no-border flex-column px-8">
+              <h3 className="modal-title" id="depostwalletmodal"> Deposit Wallet </h3>
+              <button type="button" className="btn-custom-closer" data-bs-dismiss="modal" aria-label="Close"><i
+                className="ri-close-fill"></i></button>
+            </div>
+            <div className="modal-body">
+              <div className="qr_data" >
+                <img src={`https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=${centerlizedData?.wallet_address}&choe=UTF-8`} className="qr_img" />
+                <hr />
+                <ul class="bidding-list p-0">
+                  <li>
+                    <strong class="ps-0 max_txt"> Balance : {centerlizedData?.wallet_balance}</strong>
+                  </li>
+                  <li>
+                    <div className=" input-group position-relative " >
+                      <input class="form-control  form-control-solid input-copy" readOnly type="text" value={centerlizedData?.wallet_address} />
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
+
     </>
   );
 }

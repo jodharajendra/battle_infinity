@@ -74,6 +74,7 @@ const StatsPage = () => {
         });
     }
 
+
     return (
         <>
             <div className="page_wrapper" ref={messagesEndRef}>
@@ -106,7 +107,13 @@ const StatsPage = () => {
                             <div id="on-Top" className="tab-pane fade show active">
                                 <div className="iterfsh filter_stats">
                                     <div className="filter-select-option border-gradient">
-                                        <Select options={optionsTop} />
+                                        {/* <Select options={optionsTop} /> */}
+                                        <select class="form-select" aria-label="Default select example">
+                                            <option selected>Open this select menu</option>
+                                            <option value="1">One</option>
+                                            <option value="2">Two</option>
+                                            <option value="3">Three</option>
+                                        </select>
                                     </div>
                                     <div className="end">
                                         <div className="btn-group btn-group-mini border-gradient" role="group" aria-label="Basic radio toggle button group">
@@ -129,7 +136,7 @@ const StatsPage = () => {
                                                 <th scope="col">Collection</th>
                                                 <th scope="col">Price</th>
                                                 <th scope="col">%Change</th>
-                                                <th scope="col">Floor price</th>
+                                                {/* <th scope="col">Floor price</th> */}
                                                 <th scope="col">Description</th>
                                                 <th scope="col"></th>
                                             </tr>
@@ -156,8 +163,10 @@ const StatsPage = () => {
                                                         </td>
                                                         <td>{item?.nft_details?.price}</td>
                                                         <td><span className="text-danger" >0%</span></td>
-                                                        <td>0.001</td>
-                                                        <td>{item?.nft_details?.description}</td>
+                                                        {/* <td>0.001</td> */}
+                                                        <td>
+                                                            <div style={{ maxWidth: '400px' }}>{item?.nft_details?.description}</div>
+                                                        </td>
                                                     </tr>
                                                 ))
                                                 : null}
@@ -170,7 +179,14 @@ const StatsPage = () => {
                             <div id="on-activity" className="tab-pane fade">
                                 <div className="iterfsh filter_stats">
                                     <div className="filter-select-option border-gradient">
-                                        {/* <Select options={optionsTreding} /> */}
+                                        {/* <Select options={optionsWatchList} /> */}
+                                        <select class="form-select" aria-label="Default select example">
+                                            <option selected>Open this select menu</option>
+                                            <option value="1">One</option>
+                                            <option value="2">Two</option>
+                                            <option value="3">Three</option>
+                                        </select>
+
                                     </div>
                                     <div className="end">
                                         <div className="btn-group btn-group-mini border-gradient" role="group" aria-label="Basic radio toggle button group">
@@ -235,13 +251,7 @@ const StatsPage = () => {
                                 </div>
 
                             </div>
-                            <div id="on-watchlist" className="tab-pane fade">
-
-                                <div className="iterfsh filter_stats">
-                                    <div className="filter-select-option border-gradient">
-                                        <Select options={optionsWatchList} />
-                                    </div>
-                                </div>
+                            <div id="on-watchlist" className="tab-pane fade">                              
                                 <div className="table-responsive">
                                     <table className="table text-white ">
                                         <thead>

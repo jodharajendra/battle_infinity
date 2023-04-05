@@ -1,28 +1,23 @@
 import React, { useRef, useEffect, useState } from "react";
-
 import { Link } from "react-router-dom";
-import Select from 'react-select'
 import { ApiConfig } from "../../../api/apiConfig/apiConfig";
 import AuthService from "../../../api/services/AuthService";
-import { alertErrorMessage, alertSuccessMessage } from "../../../customComponent/CustomAlertMessage";
-import CollectionDetails from "../CollectionDetails";
+import { alertErrorMessage } from "../../../customComponent/CustomAlertMessage";
 
 
 const ExplorePage = () => {
 
     const messagesEndRef = useRef(null)
-
     const [collectionData, setCollectionData] = useState([]);
     const [collectedSearchData, setCollectedSearchData] = useState();
 
 
     const handleSearch = (e) => {
         let serchItem = collectedSearchData.filter((item) => {
-            return item?.name?.includes(e.target.value)
+            return item?.name.toLowerCase().includes(e.target.value.toLowerCase())
         })
         setCollectionData(serchItem)
     }
-
 
     const handleCollectionData = async () => {
         await AuthService.getCollectionData().then(async result => {
@@ -35,23 +30,26 @@ const ExplorePage = () => {
         });
     }
 
+    const [limitExplore, setLimitExplore] = useState(6);
 
-    let limit = '1000'
+    const [exploreLength, setExploreLength] = useState([]);
 
 
     useEffect(() => {
-        handleSetLimitCreated();
+        handleSetLimitExplore();
     }, []);
 
 
-
-    const handleSetLimitCreated = async () => {
-        await AuthService.getLimitExplorecollected(limit).then(async result => {
+    const handleSetLimitExplore = async () => {
+        await AuthService.getLimitExplorecollected(limitExplore).then(async result => {
             if (result.success) {
                 try {
+                    // console.log(result, 'resultRJ');
                     // alertSuccessMessage(result?.message)
-                    setCollectionData(result?.data?.data.reverse());
+                    setCollectionData(result?.data?.data);
                     setCollectedSearchData(result?.data?.data);
+                    setExploreLength(result?.data?.filter?.count);
+                    setLimitExplore(limitExplore + 3);
                 } catch (error) {
                     alertErrorMessage(result.message);
                 }
@@ -59,11 +57,6 @@ const ExplorePage = () => {
                 alertErrorMessage(result.message);
             }
         });
-    }
-
-    const handleCollectionDetail = async (id) => {
-        // console.log(id, 'id');
-        window.location.replace(`collection_details?id=${id}`);
     }
 
     useEffect(() => {
@@ -74,22 +67,6 @@ const ExplorePage = () => {
 
     const scrollTop = () => {
         messagesEndRef?.current?.scrollIntoView(true)
-    }
-
-
-    function showMenu() {
-        let tab = document.getElementById("rent_nf");
-        let tab1 = document.getElementById("buy_nf");
-        tab.classList.remove("btn-gradient");
-        tab1.classList.add("btn-gradient");
-    }
-
-
-    function hideMenu() {
-        let tab1 = document.getElementById("buy_nf");
-        let tab = document.getElementById("rent_nf");
-        tab.classList.add("btn-gradient");
-        tab1.classList.remove("btn-gradient");
     }
 
     return (
@@ -105,7 +82,6 @@ const ExplorePage = () => {
                             <div className="filter-style-one common-filter d-flex-between explore_filter">
                                 <div className="d-flex-center filter-left-cate">
                                     <input style={{ width: '100%' }} type="search" name="search" placeholder="Search by Name" id="search" onChange={(e) => { handleSearch(e) }} />
-
                                 </div>
                                 <div className="d-flex-center filter-right-cate">
                                     <ul className="nav icon-tabs">
@@ -116,14 +92,6 @@ const ExplorePage = () => {
                                             <Link className="btn" data-bs-toggle="tab" to="#view-list"><i className="ri-list-check-2"></i></Link>
                                         </li>
                                     </ul>
-                                    {/* <div className="btn-group custom-group border-gradient" >
-                                        <button className="btn btn-gradient" id="rent_nf" type="button" onClick={() => hideMenu()}>
-                                            BUY
-                                        </button>
-                                        <button className="btn " id="buy_nf" type="button" onClick={() => showMenu()} >
-                                            RENT
-                                        </button>
-                                    </div> */}
                                 </div>
                             </div>
                         </form>
@@ -137,21 +105,21 @@ const ExplorePage = () => {
                                     {collectionData.length > 0
                                         ? collectionData.map((item) => (
                                             <div className="col-xxl-4 col-md-6 mb-6" >
-                                                <div className="popular-collection-style-one border-gradient" onClick={() => { handleCollectionDetail(item?._id) }} >
-                                                    <Link>
+                                                <div className="popular-collection-style-one border-gradient" >
+                                                    <Link to={`collection_details?id=${item?._id}`}>
                                                         {!item?.banner_image ? <img src="images/collection/tc_1.png" alt="popular collection" /> :
                                                             <div className="large-thumbnail ratio ratio-16x9"> <img src={`${ApiConfig.baseUrl + item?.banner_image}`} /></div>
                                                         }
                                                     </Link>
                                                     <div className="content content-flex p-4">
                                                         {!item?.logo ? <img src="images/popular/small/2.png" className="avatar avatar_72" alt="history" /> :
-                                                            <Link to="/profile" className="avatar avatar_72" tabindex="0">
+                                                            <Link to={`collection_details?id=${item?._id}`} className="avatar avatar_72" tabindex="0">
                                                                 <img src={`${ApiConfig.baseUrl + item?.logo}`} className="img-fluid" />
                                                             </Link>
                                                         }
                                                         <div className="inner">
                                                             <h4 className="title ">
-                                                                <Link className="d-flex align-items-center">
+                                                                <Link className="d-flex align-items-center" to={`collection_details?id=${item?._id}`}>
                                                                     {item?.name}
                                                                 </Link>
                                                             </h4>
@@ -163,6 +131,23 @@ const ExplorePage = () => {
                                         ))
                                         : null}
                                 </div>
+                                {
+                                    collectionData.length > 0 ?
+                                        <>
+                                            {
+                                                exploreLength === collectionData.length ? '' :
+                                                    <div className="row">
+                                                        <div className="col-12 text-center mt-4">
+                                                            <button type="button" className="btn btn-outline border-gradient px-6" onClick={handleSetLimitExplore}>
+                                                                <span><i className="ri-loader-4-fill"></i> Load More</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                            }
+                                        </>
+                                        :
+                                        ''
+                                }
                             </div>
                         </section>
                     </div>
@@ -198,24 +183,23 @@ const ExplorePage = () => {
                                                 {collectionData.length > 0
                                                     ? collectionData.map((item) => (
                                                         <tr>
-
                                                             <td>
                                                                 <div className="d-flex-center avatar-info item_info">
                                                                     <div className="thumb-wrapper">
-                                                                        <Link to="#" className="thumb">
+                                                                        <Link to={`collection_details?id=${item?._id}`}  className="thumb">
                                                                             <img src={`${ApiConfig.baseUrl + item?.banner_image}`} alt="top sellter" />
                                                                         </Link>
                                                                     </div>
                                                                     <div className="content">
-                                                                        <p className="title mb-0  pb-1"><Link to="#">{item?.token_id}</Link></p>
+                                                                        <p className="title mb-0  pb-1"><Link to={`collection_details?id=${item?._id}`} >{item?.token_id}</Link></p>
                                                                     </div>
                                                                 </div>
                                                             </td>
                                                             <td>
-                                                                <p className="mb-0 text-center" >{item?.name}</p>
+                                                                <p className="mb-0 text-center" > <Link to={`collection_details?id=${item?._id}`} >{item?.name}</Link></p>
                                                             </td>
                                                             <td>
-                                                                <p className="title mb-0  pb-1 text-center"><Link to="#">{item?.token_type}</Link></p>
+                                                                <p className="title mb-0  pb-1 text-center"><Link to={`collection_details?id=${item?._id}`} >{item?.token_type}</Link></p>
                                                             </td>
                                                             <td>
                                                                 <p className="mb-0 text-center" >1</p>
@@ -226,7 +210,6 @@ const ExplorePage = () => {
                                                             <td>
                                                                 <p className="mb-0 text-end" >{item?.createdAt}</p>
                                                             </td>
-
                                                         </tr>
                                                     ))
                                                     : null}
@@ -234,8 +217,26 @@ const ExplorePage = () => {
                                         </table>
                                     </div>
                                 </div>
+                                {
+                                    collectionData.length > 0 ?
+                                        <>
+                                            {
+                                                exploreLength === collectionData.length ? '' :
+                                                    <div className="row">
+                                                        <div className="col-12 text-center mt-4">
+                                                            <button type="button" className="btn btn-outline border-gradient px-6" onClick={handleSetLimitExplore}>
+                                                                <span><i className="ri-loader-4-fill"></i> Load More</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                            }
+                                        </>
+                                        :
+                                        ''
+                                }
                             </div>
                         </section>
+
                     </div>
                 </div>
             </div>

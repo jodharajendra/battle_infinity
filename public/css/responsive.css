@@ -101,13 +101,17 @@ body {
     padding: 20px;
     border-radius: 0;
     border: none;
+    min-width: 100%;
+    width: 100%;
 }
 .nft-item-card h3 {
     font-size: 18px;
+    
+    max-width: calc(100% - 25px);
 }
 .nft-item-card p {
     font-size: 12px;
-    margin: 6px 0 16px !important;
+    margin: 0px 0 11px !important;
 }
 .main_img_slide {
     border-radius: 16px;
@@ -170,14 +174,16 @@ h4, .aw-h4 {
 }
 .nft-item-card  .single-item-history .avatar {
     margin-right: 15px;
-        width: 80px;
-    height: 80px;
-    min-width:80px;
+    width: 70px;
+    height: 70px;
+    min-width: 70px;
 }
 .flex_filter {
     margin-left: 0;
 }
-
+.nft-item-card .btn {
+    padding: 7px 12px;
+}
 
 .filter-left-cate .filter-select-option {
     flex-basis: calc(50% - 10px);

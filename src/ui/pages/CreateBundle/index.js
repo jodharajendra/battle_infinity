@@ -5,20 +5,40 @@ import { alertErrorMessage, alertSuccessMessage } from "../../../customComponent
 import { ProfileContext } from "../../../context/ProfileProvider";
 import { ApiConfig } from "../../../api/apiConfig/apiConfig";
 import Web3 from "web3";
-// import contract from "./contract.json";
 import LoaderHelper from "../../../customComponent/Loading/LoaderHelper";
 import contract from '../../../contract.json'
+import { $ } from "react-jquery-plugin";
+import moment from "moment";
+const CreateBundle = (props) => {
 
+    let newTokenAddress = '0xD081A82179bdC6ecc25Fbfa8D956E06BbC8F3437'
 
-const CreateBundle = () => {
-    const web3 = new Web3(window.ethereum)
-    const [tokenId, setTokenId] = useState('')
-    const bundleContract = new web3.eth.Contract(contract.bundleAbi, contract.bundleAddress);
-    const bundleMarketContract = new web3.eth.Contract(contract.bundleMarketAbi, contract.nftAddress);
+    const [userDetailstoId, setUserDetailstoId] = useState([])
+
+    const [userDetails, setUserDetails] = useState([])
+    const [tokenType, setTokenType] = useState([])
+    const [bundleNameNew, setBundleNameNew] = useState('');
+    const [bundlePriceNew, setBundlePriceNew] = useState('');
+    const [bundleuserinfoLength, setBundleuserinfoLength] = useState('');
+    const [bundleObjectuserinfo, setBundleObjectuserinfo] = useState('');
+    const [password, setPassword] = useState('');
+    const [centerlizedData, setCenterlizedData] = useState([])
+    const [createdNftData, setCreatedNftData] = useState([]);
+    const [bundlePrice, setBundlePrice] = useState('');
+    const [bundleName, setBundleName] = useState('');
+    const [profileState, updateProfileState] = useContext(ProfileContext);
+    const navigate = useNavigate();
+
+    let web3
+    if (!window.ethereum) {
+        web3 = new Web3("https://data-seed-prebsc-1-s1.binance.org:8545/")
+    } else {
+        web3 = new Web3(window.ethereum)
+    }
+
+    const nftContract = new web3.eth.Contract(contract.nftAbi, contract.nftAddress);
+    const marketContract = new web3.eth.Contract(contract.marketplaceAbi, contract.marketplaceAddress);
     const messagesEndRef = useRef(null)
-    let marketplaceAddress = "0x6d7D7842F4256f7Bd4ece025A68D2CF964De6abE"
-    const walletAddress = localStorage.getItem("wallet_address");
-
 
     useEffect(() => {
         scrollTop();
@@ -29,12 +49,7 @@ const CreateBundle = () => {
     const scrollTop = () => {
         messagesEndRef?.current?.scrollIntoView(true)
     }
-    const [createdNftData, setCreatedNftData] = useState([]);
-    const [emailId, setEmailId] = useState("");
-    const [bundlePrice, setBundlePrice] = useState('');
-    const [bundleName, setBundleName] = useState('');
-    const [profileState, updateProfileState] = useContext(ProfileContext);
-    const navigate = useNavigate();
+
 
     const handleLogOut = () => {
         updateProfileState({});
@@ -48,7 +63,9 @@ const CreateBundle = () => {
         await AuthService.getUserDetails().then(async result => {
             if (result.success) {
                 try {
-                    setEmailId(result?.data?.email_or_phone);
+                    setUserDetailstoId(result.data);
+                    setUserDetails(result?.data?.wallet_address);
+                    setTokenType(result?.data?.type);
                 } catch (error) {
                     alertErrorMessage(result.message);
                 }
@@ -59,11 +76,9 @@ const CreateBundle = () => {
                 } else {
                     handleLogOut();
                 }
-                // console.log(result.message, 'result.message');
             }
         });
     }
-
 
     const handlerefreshToken = async () => {
         await AuthService.refreshTokenData().then(async result => {
@@ -79,8 +94,6 @@ const CreateBundle = () => {
     }
 
     let limit = '1000'
-
-
 
     const handleSetLimitCreated = async () => {
         await AuthService.getLimitCreated(limit).then(async result => {
@@ -99,56 +112,34 @@ const CreateBundle = () => {
 
 
     const [userinfo, setUserInfo] = useState({
-        nft_object: [],
+        nft_object: []
     });
 
-    const [usertokenID, setUsertokenID] = useState({
-        nft_object2: [],
-    });
 
-    console.log(userinfo?.nft_object, " : arr token id");
 
-    const handleChange = (selectedRow) => {
-        // Destructuring
-        //let rj = userinfo?.nft_object?.findIndex(selectedRow);
+    const handleChange = (e, selectedRow) => {
 
-        //console.log(rj,'RAJED');
         const { nft_object } = userinfo;
 
-        const { nft_object2 } = usertokenID;
-
-        let myRj = nft_object.filter((e) => e !== { id: selectedRow?.token_id, file: selectedRow?.file });
-        console.log(myRj, 'myRj');
-        // Case 1 : The user checks the box
-        if (selectedRow) {
+        if (e.target.checked) {
             setUserInfo({
                 nft_object: [...nft_object, { id: selectedRow?.token_id, file: selectedRow?.file }],
             });
-
-            setUsertokenID({
-                nft_object2: [...nft_object2, selectedRow?.token_id],
-            });
-        }
-
-        // Case 2  : The user unchecks the box
-        else {
-            console.log(userinfo, 'nft_object');
+        } else {
+            let arr = userinfo?.nft_object
+            let nft_object = arr.filter((data) => {
+                return data?.id !== selectedRow?.token_id
+            })
             setUserInfo({
-                nft_object: nft_object.filter((e) => e !== { id: selectedRow?.token_id, file: selectedRow?.file }),
+                nft_object: nft_object,
             });
-
         }
     };
-
-    // console.log(userinfo, 'userinfo');
-
-
 
     const handleCreateBundle = async (bundleName, bundlePrice, userinfoLength, Objectuserinfo) => {
         await AuthService.createBundle(bundleName, bundlePrice, userinfoLength, Objectuserinfo).then(async result => {
             if (result.success) {
                 try {
-                    // alertSuccessMessage(result?.message)
                     createBundleMetamask();
                 } catch (error) {
                     alertErrorMessage(result.message);
@@ -159,103 +150,209 @@ const CreateBundle = () => {
         });
     }
 
-    const createBundleMetamask = async () => {
-        LoaderHelper.loaderStatus(true);
-        const accounts = await web3.eth.getAccounts();
-        const account = accounts[0]
-        let boolienValue = true
 
-        console.log(boolienValue, 'boolienValue');
-        let data = await bundleMarketContract.methods.setApprovalForAll(marketplaceAddress, boolienValue,).send({ from: account })
-        console.log(data, 'dataTx');
-        // setTokenId(web3.utils.hexToNumber(data?.events?.Transfer?.raw?.topics[3]))
-        if (data?.status) {
-            createSalePack();
+    const handleCreateBundlecentralized = async (privateKey) => {
+        await AuthService.createBundle(bundleNameNew, bundlePriceNew, bundleuserinfoLength, bundleObjectuserinfo).then(async result => {
+            if (result.success) {
+                try {
+                    approveCentralised(privateKey);
+                } catch (error) {
+                    alertErrorMessage(result.message);
+                }
+            } else {
+                alertErrorMessage(result.message);
+            }
+        });
+    }
+
+    const handleCreateBundleNew = async (bundleName, bundlePrice, userinfoLength, Objectuserinfo) => {
+        setBundleNameNew(bundleName)
+        setBundlePriceNew(bundlePrice)
+        setBundleuserinfoLength(userinfoLength)
+        setBundleObjectuserinfo(Objectuserinfo)
+
+        if (!bundleName) {
+            alertErrorMessage('Please Enter BundleName')
+        } else if (!bundlePrice) {
+            alertErrorMessage('Please Enter BundlePrice')
+        } else if (!userinfoLength) {
+            alertErrorMessage('Please Enter BundleImage')
         } else {
-            alertErrorMessage('Something Went Wrong')
+            $("#enterpasswordmodal").modal('show');
+        }
+    }
+
+
+
+    useEffect(() => {
+        if (tokenType === 'centralized') {
+            handleCenterlizedWalletData();
+        }
+    }, [])
+
+    const handleCenterlizedWalletData = async () => {
+        await AuthService.getCenterlizedWalletData().then(async result => {
+            if (result.success) {
+                setCenterlizedData(result?.data)
+            }
+        });
+    }
+
+    const handleDecryptData = async (password) => {
+        try {
+            let dcrypt = await web3.eth.accounts.decrypt(centerlizedData?.wallet_data, password);
+            if (dcrypt?.privateKey) {
+                $("#enterpasswordmodal").modal('hide');
+                handleCreateBundlecentralized(dcrypt?.privateKey)
+            }
+        } catch (error) {
+            console.log(error, 'error:handleDecryptData');
+            alertErrorMessage(error.message)
+        }
+    }
+
+
+    const createBundleMetamask = async () => {
+        try {
+            LoaderHelper.loaderStatus(true);
+            const accounts = await web3.eth.getAccounts();
+            const account = accounts[0]
+            let boolienValue = true
+            let data = await nftContract.methods.setApprovalForAll(contract.marketplaceAddress, boolienValue,).send({ from: account })
+            if (data?.status) {
+                createSalePack();
+            }
+        } catch (error) {
+            LoaderHelper.loaderStatus(false);
+            alertErrorMessage(error?.message)
         }
     }
 
     const createSalePack = async () => {
-        alertSuccessMessage('createSalePack')
-        const accounts = await web3.eth.getAccounts()
-        const account = accounts[0]
-        let arryaId = []
-        let tokenIds = usertokenID?.nft_object2; //convert to hex
-        for (let i = 0; i < tokenIds.length; i++) {
-            var hexaDecimalToken = tokenIds[i];
-            arryaId.push(hexaDecimalToken)
-        }
-        const numberToHex = (_num) => {
-            var inputAmt = _num;
-            var weiAmt = (1000000000000000000 * inputAmt);
-            var hexaDecimal = "0x" + weiAmt.toString(16);
-            return hexaDecimal;
-        }
-        let buyNowPrice = numberToHex(bundlePrice)
-        const tx = await bundleContract.methods.createSaleForPack(contract.nftAddress, arryaId, buyNowPrice).send({ from: account })
-        if (tx) {
-            alertSuccessMessage('Successfully Update createSalePack')
+        try {
+            const accounts = await web3.eth.getAccounts()
+            const account = accounts[0]
+            let arryaId = []
+            let tokenIds = userinfo?.nft_object; //convert to hex
+            for (let i = 0; i < tokenIds.length; i++) {
+                var hexaDecimalToken = tokenIds[i].id;
+                arryaId.push(hexaDecimalToken)
+            }
+            const numberToHex = (_num) => {
+                var inputAmt = _num;
+                var weiAmt = (1000000000000000000 * inputAmt);
+                var hexaDecimal = "0x" + weiAmt.toString(16);
+                return hexaDecimal;
+            }
+            let buyNowPrice = numberToHex(bundlePrice)
+            const tx = await marketContract.methods.createSaleForPack(contract.nftAddress, arryaId, buyNowPrice).send({ from: account })
+            if (tx) {
+                alertSuccessMessage('Successfully Update createSalePack')
+                LoaderHelper.loaderStatus(false);
+                handleSellStatusSellNow(arryaId,)
+                navigate('/profile')
+            }
+        } catch (error) {
+            console.log(error, ':ERROR');
             LoaderHelper.loaderStatus(false);
+            alertErrorMessage(error?.message)
         }
     }
 
 
 
-    const approveCentralised = async () => {
-        LoaderHelper.loaderStatus(true);
-        const privateKeyOfwallet = '0x0e20a03cd80f0780a0c4cfe3d5260745b0a83c9ee90f2f7fc092cddf5c5d761e' //Private key of wallet goes here
-        const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
-        const contract_address = "0xD081A82179bdC6ecc25Fbfa8D956E06BbC8F3437" // NFt contract address
-        const tx = {
-            from: address, // Wallet address
-            to: contract_address, // Contract address of battle infinity
-            gas: 1000000,
-            data: await bundleMarketContract.methods.setApprovalForAll(marketplaceAddress, true).encodeABI()
-        }
-        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
-        const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-        if (transactionReceipt?.status) {
-            createPackCentralised();
-        } else {
-            alertErrorMessage('Something Went Wrong')
+    const approveCentralised = async (privateKey) => {
+        try {
+            LoaderHelper.loaderStatus(true);
+            const privateKeyOfwallet = privateKey //Private key of wallet goes here
+            const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
+            const contract_address = "0xD081A82179bdC6ecc25Fbfa8D956E06BbC8F3437" // NFt contract address
+            const tx = {
+                from: address, // Wallet address
+                to: contract_address, // Contract address of battle infinity
+                gas: 1000000,
+                data: await nftContract.methods.setApprovalForAll(contract.marketplaceAddress, true).encodeABI()
+            }
+            const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
+            const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+            if (transactionReceipt?.status) {
+                createPackCentralised(privateKey);
+            }
+        } catch (error) {
+            console.log(error, 'Error');
+            LoaderHelper.loaderStatus(false);
+            alertErrorMessage(error?.message)
         }
     }
 
 
-    const createPackCentralised = async () => {
-        alert('createPackCentralised')
-        LoaderHelper.loaderStatus(true);
-        const privateKeyOfwallet = '0x0e20a03cd80f0780a0c4cfe3d5260745b0a83c9ee90f2f7fc092cddf5c5d761e' //Private key of wallet goes here
-        const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
-        const contract_address = "0x6d7D7842F4256f7Bd4ece025A68D2CF964De6abE"
-        let arryaId = []
-        let tokenIds = usertokenID?.nft_object2; //convert to hex
-        for (let i = 0; i < tokenIds.length; i++) {
-            var hexaDecimalToken = tokenIds[i];
-            arryaId.push(hexaDecimalToken)
-        }
+    const createPackCentralised = async (privateKey) => {
+        try {
+            LoaderHelper.loaderStatus(true);
+            const privateKeyOfwallet = privateKey //Private key of wallet goes here
+            const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
+            const contract_address = "0x4b80Efd0087F255DAf1F4b43D99948b0e6356481"
+            let arryaId = []
 
-        const numberToHex = (_num) => {
-            var inputAmt = _num;
-            var weiAmt = (1000000000000000000 * inputAmt);
-            var hexaDecimal = "0x" + weiAmt.toString(16);
-            return hexaDecimal;
-        }
-        let buyNowPrice = numberToHex(bundlePrice)
+            let tokenIds = userinfo?.nft_object; //convert to hex
+            for (let i = 0; i < tokenIds.length; i++) {
+                var hexaDecimalToken = tokenIds[i].id;
+                arryaId.push(hexaDecimalToken)
+            }
 
-        const tx = {
-            from: address, // Wallet address
-            to: contract_address, // Contract address of battle infinity
-            gas: 1000000,
-            data: await bundleContract.methods.createSaleForPack(contract.nftAddress, arryaId, buyNowPrice).encodeABI()
-        }
-        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
-        const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-        if (transactionReceipt?.status === true) {
+            const numberToHex = (_num) => {
+                var inputAmt = _num;
+                var weiAmt = (1000000000000000000 * inputAmt);
+                var hexaDecimal = "0x" + weiAmt.toString(16);
+                return hexaDecimal;
+            }
+            let buyNowPrice = numberToHex(bundlePrice)
+            const tx = {
+                from: address, // Wallet address
+                to: contract_address, // Contract address of battle infinity
+                gas: 1000000,
+                data: await marketContract.methods.createSaleForPack(contract.nftAddress, arryaId, buyNowPrice).encodeABI()
+            }
+            const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
+            const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+            if (transactionReceipt?.status === true) {
+                LoaderHelper.loaderStatus(false);
+                alertSuccessMessage('Successfully Update createSalePack')
+                navigate('/profile')
+            }
+        } catch (error) {
+            console.log(error, 'error:error');
             LoaderHelper.loaderStatus(false);
-            alertSuccessMessage('Successfully Update createSalePack')
+            alertErrorMessage('something Went Wrong')
         }
+    }
+
+    // console.log(createdNftData,'createdNftData');
+
+
+    // const filteredNftData = [];
+
+    // for (let i = 0; i < createdNftData?.length; i++) {
+    //     if (createdNftData[i]?.nftSeller) {
+    //         filteredNftData.push(createdNftData[i]);
+    //     }
+    // }
+
+
+    const handleSellStatusSellNow = async (arryaId) => {
+        console.log(arryaId,'arryaId');
+        await AuthService.statusonBundle(arryaId, newTokenAddress, userDetailstoId?._id, bundlePrice).then(async result => {
+            if (result.success) {
+                try {
+                    handleuserProfile();
+                } catch (error) {
+                    alertErrorMessage(error);
+                }
+            } else {
+                LoaderHelper.loaderStatus(false);
+                // alertErrorMessage(result.message);
+            }
+        });
     }
 
     return (
@@ -283,18 +380,18 @@ const CreateBundle = () => {
                                         </div>
                                         <div class="field-box form-group">
                                             <label for="name" class="up_label"> Bundle Price <em className="text-danger" >*</em> </label>
-                                            <input type="text" placeholder="Enter Bundle Price" value={bundlePrice} onChange={(e) => setBundlePrice(e.target.value)} />
+                                            <input type="number" placeholder="Enter Bundle Price" value={bundlePrice} onChange={(e) => setBundlePrice(e.target.value)} />
                                         </div>
                                         <div className="bun_nft_list" >
                                             <div class="iterfsh pt-0">
                                                 <h5> Select NFT's</h5></div>
                                             <div className="row_th" >
                                                 <div className="row align-items-center">
-                                                    <div className="col-md-4" >
+                                                    <div className="col-md-2" >
                                                         <div className=" mb-0 h6"> Item </div>
                                                     </div>
                                                     <div className="col-md-4" >
-                                                        <div className=" mb-0 h6"> Collection Name </div>
+                                                        <div className=" mb-0 h6"> Name </div>
                                                     </div>
                                                     <div className="col-md-2" >
                                                         <div className=" mb-0 h6">Price</div>
@@ -308,25 +405,25 @@ const CreateBundle = () => {
                                                 createdNftData.length > 0
                                                     ? createdNftData.map((item) => (
                                                         <div class="form-check bun_nft_list_check">
-                                                            <input class="form-check-input" type="checkbox" id="flexCheckDefault" onChange={() => handleChange(item)} />
+                                                            <input class="form-check-input" type="checkbox" id="flexCheckDefault" onChange={(e) => handleChange(e, item)} />
                                                             <label class="form-check-label" for="flexCheckDefault">
                                                                 <div className="row align-items-center" >
-                                                                    <div className="col-md-4" >
+                                                                    <div className="col-md-2" >
                                                                         <a href="#" className="cll_name" >
-                                                                            <img src="https://i.seadn.io/gcs/files/284fbeb9767db70a90fb2d3a9e1f095c.png?auto=format&w=384" width="40" height="40" alt="" />
-                                                                            <div className=" mb-0 h5" >{item?.name}</div>
+                                                                            <img src={`${ApiConfig.baseUrl + item?.file}`} width="40" height="40" />
+                                                                            {/* <div className=" mb-0 h5" >{item?.name}</div> */}
                                                                         </a>
                                                                     </div>
                                                                     <div className="col-md-4" >
                                                                         <div className="cll_name" >
-                                                                            <div className=" mb-0 h6" >NFT Name</div>
+                                                                            <div className=" mb-0 h6" >{item?.name}</div>
                                                                         </div>
                                                                     </div>
                                                                     <div className="col-md-2" >
-                                                                        <div className=" mb-0 h6" >12ETH</div>
+                                                                        <div className=" mb-0 h6" >{item?.price}</div>
                                                                     </div>
-                                                                    <div className="col-md-2" >
-                                                                        <div className=" mb-0 h6" > 21-12-2022 </div>
+                                                                    <div className="col-md-4" >
+                                                                        <div className=" mb-0 h6" > {moment(item?.createdAt).format('MMMM Do YYYY, h a')} </div>
                                                                     </div>
                                                                 </div>
                                                             </label>
@@ -334,11 +431,6 @@ const CreateBundle = () => {
 
                                                     ))
                                                     : null}
-                                        </div>
-                                        <div class="form-group">
-                                            <button type="button" class="btn btn-gradient btn-border-gradient px-5 btn-block w-100">
-                                                <span class="d-block w-100 text-center">CREATE BUNDLE</span>
-                                            </button>
                                         </div>
                                     </div>
                                     <div className="sidepanel sidepanel_right sidepanel_fixed" >
@@ -350,7 +442,9 @@ const CreateBundle = () => {
                                                         ? userinfo?.nft_object?.map((item) => (
                                                             <>
                                                                 <a href="#">
-                                                                    <img src={`${ApiConfig.baseUrl + item?.file}`} alt="" />
+                                                                    <div className="ratio ratio-1x1" >
+                                                                        <img src={`${ApiConfig.baseUrl + item?.file}`} alt="" />
+                                                                    </div>
                                                                 </a>
                                                             </>
                                                         ))
@@ -365,25 +459,16 @@ const CreateBundle = () => {
                                                 <span className="h5 text-white" >{bundlePrice}</span>
                                             </div>
                                         </div>
-
-
                                         {
-                                            walletAddress === '0xC1fEec289C4110A103F7A3F759cFA7a61d18a173' ?
-
-
-                                                <button type="button" class="btn btn-gradient btn-border-gradient px-5 mt-4  btn-block w-100"
-                                                    onClick={() => approveCentralised()}>
+                                            tokenType === 'centralized' ?
+                                                <button type="button" class="btn btn-gradient btn-border-gradient px-5 mt-4  btn-block w-100" onClick={() => handleCreateBundleNew(bundleName, bundlePrice, userinfo?.nft_object?.length, userinfo?.nft_object)}>
                                                     <span class="d-block w-100 text-center">CREATE BUNDLE</span>
                                                 </button>
-
                                                 :
-
-
                                                 <button type="button" class="btn btn-gradient btn-border-gradient px-5 mt-4  btn-block w-100" onClick={() => handleCreateBundle(bundleName, bundlePrice, userinfo?.nft_object?.length, userinfo?.nft_object)}>
                                                     <span class="d-block w-100 text-center">CREATE BUNDLE</span>
                                                 </button>
                                         }
-
                                     </div>
                                 </div>
                             </div>
@@ -391,6 +476,32 @@ const CreateBundle = () => {
                     </div>
                 </section>
             </div>
+
+
+            <div className="modal fade" id="enterpasswordmodal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="enterpasswordmodallabel" aria-hidden="true">
+                <div className="modal-dialog modal-dialog-centered">
+                    <div className="modal-content">
+                        <div className="modal-header no-border flex-column px-8">
+                            <h3 className="modal-title" id="enterpasswordmodallabel"> Enter Your Password </h3>
+                            <button type="button" className="btn-custom-closer" data-bs-dismiss="modal" aria-label="Close"><i
+                                className="ri-close-fill"></i></button>
+                        </div>
+                        <div className="modal-body" >
+                            <form className=" px-4" >
+                                <hr />
+                                <div class="form-group mb-5 mt-5">
+                                    <label> Password </label>
+                                    <input type="password" class="form-control" placeholder="Enter Your Password" aria-label="f-name" aria-describedby="basic-addon2" name="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                                </div>
+                                <button type="button" class="btn btn-gradient btn-border-gradient w-100 justify-content-center mb-4" onClick={() => handleDecryptData(password)}>
+                                    <span>SAVE</span></button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
         </>
     )
 }

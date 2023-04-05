@@ -82,11 +82,6 @@ const MyBundels = () => {
     }
 
 
-    const handleProceed = (id) => {
-        window.location.replace(`collection_details?id=${id}`);
-    };
-
-
     let limit = '1000'
 
 

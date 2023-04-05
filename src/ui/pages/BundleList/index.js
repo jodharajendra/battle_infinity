@@ -1,32 +1,86 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import Select from 'react-select'
 import Web3 from "web3";
-import { ApiConfig } from "../../../api/apiConfig/apiConfig";
 import AuthService from "../../../api/services/AuthService";
 import { alertErrorMessage, alertSuccessMessage } from "../../../customComponent/CustomAlertMessage";
 import LoaderHelper from "../../../customComponent/Loading/LoaderHelper";
-
-import contract from '../../../contract.json'
+import contract from '../../../contract.json';
+import { $ } from "react-jquery-plugin";
 
 const BundleList = () => {
-    const messagesEndRef = useRef(null)
-    const web3 = new Web3(window.ethereum)
-    const nftContract = new web3.eth.Contract(contract.nftAbi, contract.nftAddress);
-    const marketplace = new web3.eth.Contract(contract.bundleAbi, contract.bundleAddress)
 
+    const [userDetails, setUserDetails] = useState([])
+    const [tokenType, setTokenType] = useState([])
+
+    useEffect(() => {       
+          handleuserProfile();
+      }, [])
+    
+      const handleuserProfile = async () => {
+        await AuthService.getUserDetails().then(async result => {
+          if (result?.success) {
+            setUserDetails(result?.data?.wallet_address);
+            setTokenType(result?.data?.type);
+            if (result?.data?.type === 'centralized') {
+                handleCenterlizedWalletData();
+            }
+          }
+        });
+      }
+
+
+    const messagesEndRef = useRef(null)
+
+    let web3
+    if (!window.ethereum) {
+        web3 = new Web3("https://data-seed-prebsc-1-s1.binance.org:8545/")
+    } else {
+        web3 = new Web3(window.ethereum)
+    }
+
+    const [password, setPassword] = useState('');
+    const nftContract = new web3.eth.Contract(contract.nftAbi, contract.nftAddress);
+    const marketplace = new web3.eth.Contract(contract.marketplaceAbi, contract.marketplaceAddress)
     const token_address = '0xD081A82179bdC6ecc25Fbfa8D956E06BbC8F3437';
     const [nftDetails, setnftDetails] = useState([]);
     const [nftDetailFiltered, setnftDetailFiltered] = useState();
     const [nftDetailFilteredSearch, setnftDetailFilteredSearch] = useState();
-
     const [tokenIdPack, setTokenIdPack] = useState([]);
-    const walletAddress = localStorage.getItem("wallet_address");
-
+    const [centerlizedData, setCenterlizedData] = useState([])
+    const [userPrice, setUserPrice] = useState('')
 
     useEffect(() => {
         nftSellsList(token_address);
     }, []);
+
+
+    const handleCenterlizedWalletData = async () => {
+        await AuthService.getCenterlizedWalletData().then(async result => {
+            if (result.success) {
+                setCenterlizedData(result?.data)
+            }
+        });
+    }
+
+    const handleDecryptData = async (password) => {
+        try {
+            let dcrypt = await web3.eth.accounts.decrypt(centerlizedData?.wallet_data, password);
+            if (dcrypt?.privateKey) {
+                $("#enterpasswordmodal").modal('hide');
+                buyPackCentralized(dcrypt?.privateKey)
+            }
+        } catch (error) {
+            console.log(error, 'error:handleDecryptData');
+            alertErrorMessage(error.message)
+        }
+    }
+
+
+    const handleGetValue = (price) => {
+        $("#enterpasswordmodal").modal('show');
+        setUserPrice(price)
+    }
+
 
     const nftSellsList = async (token_address) => {
         LoaderHelper.loaderStatus(true);
@@ -34,10 +88,8 @@ const BundleList = () => {
             if (result.success) {
                 LoaderHelper.loaderStatus(false);
                 try {
-                    LoaderHelper.loaderStatus(false);
                     setnftDetails(result?.data?.result)
                 } catch (error) {
-                    LoaderHelper.loaderStatus(false);
                     alertErrorMessage(error);
                 }
             } else {
@@ -45,8 +97,6 @@ const BundleList = () => {
                 alertErrorMessage(result.message);
                 if (result.message === 'Unauthorized Request!') {
                     Navigate('/login')
-                } else {
-
                 }
             }
         });
@@ -65,24 +115,17 @@ const BundleList = () => {
         }
     }, [nftDetails]);
 
-
     const getSellsList = async () => {
-        const accounts = await web3.eth.getAccounts()
-        const account = accounts[0]
         let arr = [];
         try {
             for (let i = 0; i < nftDetails.length; i++) {
                 LoaderHelper.loaderStatus(true);
                 let tkId = parseInt(nftDetails[i].token_id)
                 let ownerOfNft = await nftContract.methods.ownerOf(nftDetails[i].token_id).call()
-                if (ownerOfNft === contract.bundleAddress) {
+                if (ownerOfNft === contract.marketplaceAddress) {
                     let sellDetails = await marketplace.methods.nftContractAuctions(nftDetails[i].token_address, nftDetails[i].token_id).call()
-                    console.log(sellDetails, 'sellDetails');
-                    // if (sellDetails?.pack === true) {
-                    //     tokenIDPack(sellDetails);
-                    // }
-                    if (sellDetails.minPrice === '0') {
-
+                    console.log(sellDetails,'sellDetails');                  
+                    if (sellDetails.minPrice === '0' && sellDetails?.pack === true) {
                         let obj = {
                             token_address: nftDetails[i].token_address,
                             metaData: JSON.parse(nftDetails[i].metadata),
@@ -99,7 +142,7 @@ const BundleList = () => {
                         arr.push(obj)
                     }
                 } else {
-                    // console.log(' in else');
+                    // console.log('in else');
                 }
             }
             LoaderHelper.loaderStatus(false);
@@ -107,89 +150,91 @@ const BundleList = () => {
             setnftDetailFilteredSearch(arr)
             tokenIDPack(arr);
         } catch (error) {
-            // console.log(error.message);
+            alertErrorMessage(error.message)
+            LoaderHelper.loaderStatus(false);
         }
     };
 
-    // console.log(nftDetailFiltered, 'nftDetailFiltered[0]?.token_idR');
-    console.log(nftDetailFiltered, 'nftDetailFiltered[0]?.token_id');
-
     const tokenIDPack = async (detailPAck) => {
-
-
         let arryaId = []
         let tokenIdsNew = detailPAck; //convert to hex
         for (let i = 0; i < tokenIdsNew.length; i++) {
             var hexaDecimalToken = tokenIdsNew[i].token_id;
             arryaId.push(hexaDecimalToken)
         }
-
-
-         console.log(detailPAck,'detailPAck');
-
-         console.log(arryaId,'arryaId');
-
         const accounts = await web3.eth.getAccounts()
         const account = accounts[0]
         let tokenIds = detailPAck[1]?.token_id
-        // console.log(tokenIds, 'tokenIdPackJJ');
         const tx = await marketplace.methods.tokensInPack(contract.nftAddress, tokenIds).call({ from: account })
-        // console.log(tx, "tokenIDPack:RAJENDRA ");
         setTokenIdPack(tx);
     }
 
-
-    console.log(tokenIdPack, 'tokenIdPack');
-
     const buyPack = async (buyPrice) => {
-        const accounts = await web3.eth.getAccounts()
-        const account = accounts[0]
-        let tokenIds = tokenIdPack
-        console.log(tokenIds, 'tokenIdstokenIdsbuyPack');
-        const numberToHex = (_num) => {
-            var inputAmt = _num;
-            var weiAmt = (1000000000000000000 * inputAmt);
-            var hexaDecimal = "0x" + weiAmt.toString(16);
-            return hexaDecimal;
-        }
-        let buyNowPrice = numberToHex(buyPrice)
-        const tx = await marketplace.methods.buyPack(contract.nftAddress, tokenIds).send({ from: account, value: buyNowPrice })
-        console.log("Tx: ", tx);
-        if (tx?.status === true) {
-            alertSuccessMessage('Successfully Buy Pack')
-            getSellsList();
-        }
-    }
-
-
-    const buyPackCentralized = async (buyPrice) => {
-        LoaderHelper.loaderStatus(true);
-        const privateKeyOfwallet = '0x0e20a03cd80f0780a0c4cfe3d5260745b0a83c9ee90f2f7fc092cddf5c5d761e' //Private key of wallet goes here
-        const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
-        const contract_address = "0x6d7D7842F4256f7Bd4ece025A68D2CF964De6abE" // NFt contract address
-        let arryaId = tokenIdPack
-        const numberToHex = (_num) => {
-            var inputAmt = _num;
-            var weiAmt = (1000000000000000000 * inputAmt);
-            var hexaDecimal = "0x" + weiAmt.toString(16);
-            return hexaDecimal;
-        }
-        let buyNowPrice = numberToHex(buyPrice)
-        const tx = {
-            from: address, // Wallet address
-            to: contract_address, // Contract address of battle infinity
-            gas: 1000000,
-            value: buyNowPrice,
-            data: await marketplace.methods.buyPack(contract.nftAddress, arryaId).encodeABI()
-        }
-        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
-        const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-        console.log(transactionReceipt, 'transactionReceipt');
-        if (transactionReceipt?.status) {
-            alertSuccessMessage('Successfully Buy Pack');
+        try {
+            LoaderHelper.loaderStatus(true);
+            const accounts = await web3.eth.getAccounts()
+            const account = accounts[0]
+            let tokenIds = tokenIdPack
+            const numberToHex = (_num) => {
+                var inputAmt = _num;
+                var weiAmt = (1000000000000000000 * inputAmt);
+                var hexaDecimal = "0x" + weiAmt.toString(16);
+                return hexaDecimal;
+            }
+            let buyNowPrice = numberToHex(buyPrice)
+            const tx = await marketplace.methods.buyPack(contract.nftAddress, tokenIds).send({ from: account, value: buyNowPrice })
+            if (tx?.status === true) {
+                alertSuccessMessage('Successfully Buy Pack')
+                getSellsList();
+            }
+        } catch (error) {
+            console.log(error,'Error');
+            alertErrorMessage('Transaction has been reverted by the EVM')
+            LoaderHelper.loaderStatus(false);
         }
     }
 
+    const buyPackCentralized = async (privateKey) => {
+        try {
+            LoaderHelper.loaderStatus(true);
+            const privateKeyOfwallet = privateKey //Private key of wallet goes here
+            const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
+            const contract_address = "0x4b80Efd0087F255DAf1F4b43D99948b0e6356481" // NFt contract address
+            let arryaId = tokenIdPack
+            const numberToHex = (_num) => {
+                var inputAmt = _num;
+                var weiAmt = (1000000000000000000 * inputAmt);
+                var hexaDecimal = "0x" + weiAmt.toString(16);
+                return hexaDecimal;
+            }
+            let buyNowPrice = numberToHex(userPrice)
+            const tx = {
+                from: address, // Wallet address
+                to: contract_address, // Contract address of battle infinity
+                gas: 1000000,
+                value: buyNowPrice,
+                data: await marketplace.methods.buyPack(contract.nftAddress, arryaId).encodeABI()
+            }
+            const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
+            const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+            if (transactionReceipt?.status) {
+                alertSuccessMessage('Successfully Buy Pack');
+                getSellsList();
+            }
+        } catch (error) {
+            console.log(error,'Error');
+            alertErrorMessage('Transaction has been reverted by the EVM')
+            LoaderHelper.loaderStatus(false);
+        }
+    }
+
+    const filteredPricesNew = [];
+
+    for (let i = 0; i < nftDetailFiltered?.length; i++) {
+        if (nftDetailFiltered[i]?.nftSeller != userDetails) {
+            filteredPricesNew.push(nftDetailFiltered[i]);
+        }
+    }
 
     return (
         <>
@@ -221,8 +266,8 @@ const BundleList = () => {
                                     </div>
                                 </form>
                                 <div className="row">
-                                    {nftDetailFiltered ?
-                                        nftDetailFiltered.map((item, index) => {
+                                    {filteredPricesNew ?
+                                        filteredPricesNew.map((item, index) => {
                                             return (
                                                 <>
                                                     {
@@ -238,13 +283,13 @@ const BundleList = () => {
                                                                     <div class="product-collection-footer d-flex align-items-center justify-content-between">
                                                                         <div class="product-collection-info">
                                                                             <span class="product-collection-name"><Link >{item?.metaData?.name}</Link></span>
-                                                                            <span class="product-collection-stock">{tokenIdPack.length} Items</span>
+                                                                            {/* <span class="product-collection-stock">{tokenIdPack.length} Items</span> */}
                                                                         </div>
                                                                         <span className="h5 text-white" >  {item?.buyNowPrice.toFixed(5)} </span>
                                                                     </div>
                                                                     {
-                                                                        walletAddress === '0xC1fEec289C4110A103F7A3F759cFA7a61d18a173' ?
-                                                                            <button type="button" onClick={() => buyPackCentralized(item?.buyNowPrice)} className="btn  btn-block btn-border-gradient mt-2 btn-gradient w-100 text-center btn-small">
+                                                                        tokenType === 'centralized' ?
+                                                                            <button type="button" onClick={() => handleGetValue(item?.buyNowPrice)} className="btn  btn-block btn-border-gradient mt-2 btn-gradient w-100 text-center btn-small">
                                                                                 <span> Buy Pack </span>
                                                                             </button>
                                                                             :
@@ -265,6 +310,30 @@ const BundleList = () => {
                     </div>
                 </section>
             </div >
+
+            <div className="modal fade" id="enterpasswordmodal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="enterpasswordmodallabel" aria-hidden="true">
+                <div className="modal-dialog modal-dialog-centered">
+                    <div className="modal-content">
+                        <div className="modal-header no-border flex-column px-8">
+                            <h3 className="modal-title" id="enterpasswordmodallabel"> Enter Your Password </h3>
+                            <button type="button" className="btn-custom-closer" data-bs-dismiss="modal" aria-label="Close"><i
+                                className="ri-close-fill"></i></button>
+                        </div>
+                        <div className="modal-body" >
+                            <form className=" px-4" >
+                                <hr />
+                                <div class="form-group mb-5 mt-5">
+                                    <label> Password </label>
+                                    <input type="password" class="form-control" placeholder="Enter Your Password" aria-label="f-name" aria-describedby="basic-addon2" name="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                                </div>
+                                <button type="button" class="btn btn-gradient btn-border-gradient w-100 justify-content-center mb-4" onClick={() => handleDecryptData(password)}>
+                                    <span>SAVE</span></button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </>
     )
 }

@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useContext, useRef } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import AuthService from "../../../api/services/AuthService";
 import { alertErrorMessage, alertSuccessMessage } from "../../../customComponent/CustomAlertMessage";
 import LoaderHelper from "../../../customComponent/Loading/LoaderHelper";
@@ -13,27 +13,8 @@ import { BarChart } from 'react-charts-d3';
 
 const NftDetails = (props) => {
 
-
-    const data = [
-        { key: 'Group 1', values: [{ x: 'A', y: 23 }, { x: 'B', y: 8 }] },
-        { key: 'Group 2', values: [{ x: 'A', y: 15 }, { x: 'B', y: 37 }] },
-    ];
-
-    let screenTab = props?.userid[1]
+    let walletType = props?.userid[2]
     const walletAddress = localStorage.getItem("wallet_address");
-    const { address, isConnecting, isDisconnected } = useAccount()
-    const [sellAmount, setsellAmount] = useState('');
-    let newTokenAddress = '0xD081A82179bdC6ecc25Fbfa8D956E06BbC8F3437'
-    let tokenId = parseInt(props?.userid[0]?.token_id);
-    const web3 = new Web3(window.ethereum)
-    const nftContract = new web3.eth.Contract(contract.nftAbi, contract.nftAddress);
-    const marketplace = new web3.eth.Contract(contract.marketplaceAbi, contract.marketplaceAddress)
-    const messagesEndRef = useRef(null)
-
-    // console.log(props,'newTokenAddress');
-    const scrollTop = () => {
-        messagesEndRef?.current?.scrollIntoView(true)
-    }
     const [nftDetails, setnftDetails] = useState();
     const [metaData, setmetaData] = useState();
     const [bnbBalance, setBnbBalance] = useState([])
@@ -42,9 +23,88 @@ const NftDetails = (props) => {
     const [ownerPercent, setOwnerPercent] = useState('');
     const [minimumPrice, setMinimumPrice] = useState('');
     const [buyPrice, setBuyPrice] = useState('');
-    const [bidPeriod, setBidPeriod] = useState('2');
+    const [bidPeriod, setBidPeriod] = useState('');
+    const [reportReason, setReportReason] = useState('')
+    const [description, setDescription] = useState('')
+    const [favouriteDataList, setFavouriteDataList] = useState([])
+    const { address, isConnecting, isDisconnected } = useAccount()
+    const [sellAmount, setsellAmount] = useState('');
+    const [userDetails, setUserDetails] = useState([])
+    const [password, setPassword] = useState('');
+    const [dcryptPrivateKey, setDcryptPrivateKey] = useState([])
+    const [centerlizedData, setCenterlizedData] = useState([])
+    const [buttonType, setbuttonType] = useState('');
 
-    // console.log(metaData,'metaData');
+    const [activeScreen, setActiveScreen] = useState('nftDetails');
+
+    const handleScreenTan = () => {
+        setActiveScreen('profilePage')
+    }
+
+    const navigate = useNavigate();
+
+    let screenTab = props?.userid[1]
+    let newTokenAddress = '0xD081A82179bdC6ecc25Fbfa8D956E06BbC8F3437'
+
+    let web3
+    if (!window.ethereum) {
+        web3 = new Web3("https://data-seed-prebsc-1-s1.binance.org:8545/")
+    } else {
+        web3 = new Web3(window.ethereum)
+    }
+    const nftContract = new web3.eth.Contract(contract.nftAbi, contract.nftAddress);
+    const marketplace = new web3.eth.Contract(contract.marketplaceAbi, contract.marketplaceAddress)
+    const messagesEndRef = useRef(null)
+
+    const scrollTop = () => {
+        messagesEndRef?.current?.scrollIntoView(true)
+    }
+
+    const data = [
+        { key: 'Group 1', values: [{ x: 'A', y: 23 }, { x: 'B', y: 8 }] },
+        { key: 'Group 2', values: [{ x: 'A', y: 15 }, { x: 'B', y: 37 }] },
+    ];
+
+    useEffect(() => {
+        scrollTop();
+        handleNftDetails();
+        handleFavouriteData();
+        handleuserProfile();
+    }, []);
+
+    const handleLogOut = () => {
+        localStorage.clear();
+        navigate("/login");
+        window.location.reload();
+    }
+
+    const handleuserProfile = async () => {
+        await AuthService.getUserDetails().then(async result => {
+            if (result.success) {
+                setUserDetails(result?.data);
+            } else {
+                if (result.message === 'jwt expired') {
+                    handlerefreshToken();
+                    handleuserProfile();
+                } else {
+                    handleLogOut();
+                }
+            }
+        });
+    }
+
+
+    const handlerefreshToken = async () => {
+        await AuthService.refreshTokenData().then(async result => {
+            if (result.success) {
+                localStorage.setItem('accessToken', result?.data?.accessToken);
+                localStorage.setItem('refreshToken', result?.data?.refreshToken);
+            } else {
+                //  alertErrorMessage('Raj');
+                handleLogOut();
+            }
+        });
+    }
 
 
     const handleSellStatusSellNow = async () => {
@@ -90,49 +150,95 @@ const NftDetails = (props) => {
     }
 
     const approveNft = async () => {
-        LoaderHelper.loaderStatus(true);
-        const accounts = await web3.eth.getAccounts()
-        const account = accounts[0]
-        let tokenId = parseInt(props?.userid[0]?.token_id);
-        var hexaDecimal = "0x" + (tokenId).toString(16);
-        const approveTx = await nftContract.methods.approve(contract.marketplaceAddress, hexaDecimal).send({ from: account })
-        if (approveTx?.status === true) {
-            sellNft()
+        try {
+            LoaderHelper.loaderStatus(true);
+            const accounts = await web3.eth.getAccounts()
+            const account = accounts[0]
+            let tokenId = parseInt(props?.userid[0]?.token_id);
+            var hexaDecimal = "0x" + (tokenId).toString(16);
+            const approveTx = await nftContract.methods.approve(contract.marketplaceAddress, hexaDecimal).send({ from: account })
+            if (approveTx?.status === true) {
+                sellNft()
+                $("#checkout_modal").modal('hide');
+            }
+        } catch (error) {
+            LoaderHelper.loaderStatus(false);
+            alertErrorMessage(error?.message)
         }
     }
 
     const sellNft = async () => {
-        alertSuccessMessage('sellNft');
-        const accounts = await web3.eth.getAccounts()
-        const account = accounts[0]
-        let tokenId = parseInt(props?.userid[0]?.token_id);
-        var hexaDecimalToken = "0x" + (tokenId).toString(16);
-        const numberToHex = (_num) => {
-            var inputAmt = _num;
-            var weiAmt = (1000000000000000000 * inputAmt);
-            var hexaDecimal = "0x" + weiAmt.toString(16);
-            return hexaDecimal;
-        }
-        let buyNowPrice = numberToHex(sellAmount)
-        const tx = await marketplace.methods.createSale(contract.nftAddress, hexaDecimalToken, buyNowPrice).send({ from: account })
-        if (tx?.status === true) {
+        try {
+            const accounts = await web3.eth.getAccounts()
+            const account = accounts[0]
+            let tokenId = parseInt(props?.userid[0]?.token_id);
+            var hexaDecimalToken = "0x" + (tokenId).toString(16);
+            const numberToHex = (_num) => {
+                var inputAmt = _num;
+                var weiAmt = (1000000000000000000 * inputAmt);
+                var hexaDecimal = "0x" + weiAmt.toString(16);
+                return hexaDecimal;
+            }
+            let buyNowPrice = numberToHex(sellAmount)
+            const tx = await marketplace.methods.createSale(contract.nftAddress, hexaDecimalToken, buyNowPrice).send({ from: account })
+            if (tx?.status === true) {
+                LoaderHelper.loaderStatus(false);
+                handleSellStatusSellNow();
+                alertSuccessMessage('Sell Nft Successfully')
+                setActiveScreen('profilePage')
+            }
+        } catch (error) {
             LoaderHelper.loaderStatus(false);
-            handleSellStatusSellNow();
-            alertSuccessMessage('Sell Nft Successfully')
-            $("#checkout_modal").modal('hide');
-        }
-        else {
-            alertErrorMessage('Something Went Wrong')
+            alertErrorMessage(error?.message)
         }
     }
 
-
     useEffect(() => {
-        scrollTop();
-        handleNftDetails();
-        handleFavouriteData();
-    }, []);
+        if (props?.userid[2] === 'centralized') {
+            handleCenterlizedWalletData();
+        }
+    }, [props?.userid[2]])
 
+    const handleCenterlizedWalletData = async () => {
+        await AuthService.getCenterlizedWalletData().then(async result => {
+            if (result.success) {
+                setCenterlizedData(result?.data)
+            }
+        });
+    }
+
+
+    const handlebuttonSellType = () => {
+        setbuttonType('sell')
+    }
+
+    const handlebuttonRentType = () => {
+        setbuttonType('rent')
+    }
+
+    const handlebuttonAuctionType = () => {
+        setbuttonType('auction')
+    }
+
+
+    const handleDecryptData = async (password) => {
+        try {
+            let dcrypt = await web3.eth.accounts.decrypt(centerlizedData?.wallet_data, password);
+            setDcryptPrivateKey(dcrypt?.privateKey);
+            if (dcrypt?.privateKey) {
+                $("#enterpasswordmodal").modal('hide');
+                if (buttonType === 'sell') {
+                    $("#checkout_modal").modal('show');
+                } else if (buttonType === 'rent') {
+                    $("#checkout_modal_Rent").modal('show');
+                } else {
+                    $("#Auction_Now_Model").modal('show');
+                }
+            }
+        } catch (error) {
+            alertErrorMessage(error.message)
+        }
+    }
 
     const handleNftDetails = async () => {
         await AuthService.nftDetails(props?.userid[0]?.token_id, newTokenAddress).then(async result => {
@@ -140,8 +246,6 @@ const NftDetails = (props) => {
                 try {
                     setnftDetails(result?.data)
                     setmetaData(JSON.parse(result?.data?.metadata))
-                    LoaderHelper.loaderStatus(false);
-
                 } catch (error) {
                     alertErrorMessage(error);
                 }
@@ -153,61 +257,64 @@ const NftDetails = (props) => {
     }
 
     const approveNftCentralized = async () => {
-        LoaderHelper.loaderStatus(true);
-        const privateKeyOfwallet = '0x0e20a03cd80f0780a0c4cfe3d5260745b0a83c9ee90f2f7fc092cddf5c5d761e' //Private key of wallet goes here
-        const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
-        const contract_address = "0xD081A82179bdC6ecc25Fbfa8D956E06BbC8F3437" // NFt contract address
-        let tokenId = parseInt(props?.userid[0]?.token_id);  //convert to hex
-        const tx = {
-            from: address, // Wallet address
-            to: contract_address, // Contract address of battle infinity
-            gas: 1000000,
-            data: await nftContract.methods.approve(contract.marketplaceAddress, tokenId).encodeABI()
-        }
-        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
-        const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-        if (transactionReceipt?.status) {
-            sellNftCentralized()
-            // console.log(transactionReceipt, 'transactionReceipt');
-        } else {
-            alertErrorMessage('Something Went Wrong');
+        try {
+            LoaderHelper.loaderStatus(true);
+            const privateKeyOfwallet = dcryptPrivateKey //Private key of wallet goes here
+            const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
+            const contract_address = "0xD081A82179bdC6ecc25Fbfa8D956E06BbC8F3437" // NFt contract address
+            let tokenId = parseInt(props?.userid[0]?.token_id);  //convert to hex
+            const tx = {
+                from: address, // Wallet address
+                to: contract_address, // Contract address of battle infinity
+                gas: 1000000,
+                data: await nftContract.methods.approve(contract.marketplaceAddress, tokenId).encodeABI()
+            }
+            const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
+            const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+            if (transactionReceipt?.status) {
+                sellNftCentralized()
+                $("#checkout_modal").modal('hide');
+            }
+        } catch (error) {
+            console.log(error, 'Error');
+            LoaderHelper.loaderStatus(false);
+            alertErrorMessage('Something Went Wrong')
         }
     }
 
-
     const sellNftCentralized = async () => {
-        const contract_interaction = new web3.eth.Contract(contract.marketplaceAbi, contract.marketplaceAddress)
-        const privateKeyOfwallet = '0x0e20a03cd80f0780a0c4cfe3d5260745b0a83c9ee90f2f7fc092cddf5c5d761e' //Private key of wallet goes here
-        const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
-        const contract_address = "0xD081A82179bdC6ecc25Fbfa8D956E06BbC8F3437" // Auction contract address
-        let tokenId = parseInt(props?.userid[0]?.token_id); //convert to hex
-        const numberToHex = (_num) => {
-            var inputAmt = _num;
-            var weiAmt = (1000000000000000000 * inputAmt);
-            var hexaDecimal = "0x" + weiAmt.toString(16);
-            return hexaDecimal;
-        }
-        // let buyNowPrice = numberToHex(sellAmount)
-
-        let buyNowPrice = numberToHex(sellAmount)//convert to hex
-        const tx = {
-            from: address, // Wallet address
-            to: contract_address, // Contract address of battle infinity
-            gas: 1000000,
-            data: await contract_interaction.methods.createSale(contract.nftAddress, tokenId, buyNowPrice).encodeABI()
-        }
-        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
-        const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-
-        if (transactionReceipt?.status === true) {
+        try {
+            const contract_interaction = new web3.eth.Contract(contract.marketplaceAbi, contract.marketplaceAddress)
+            const privateKeyOfwallet = dcryptPrivateKey //Private key of wallet goes here
+            const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
+            const contract_address = "0x4b80Efd0087F255DAf1F4b43D99948b0e6356481" // Auction contract address
+            let tokenId = parseInt(props?.userid[0]?.token_id); //convert to hex
+            const numberToHex = (_num) => {
+                var inputAmt = _num;
+                var weiAmt = (1000000000000000000 * inputAmt);
+                var hexaDecimal = "0x" + weiAmt.toString(16);
+                return hexaDecimal;
+            }
+            let buyNowPrice = numberToHex(sellAmount)//convert to hex
+            const tx = {
+                from: address, // Wallet address
+                to: contract_address, // Contract address of battle infinity
+                gas: 1000000,
+                data: await contract_interaction.methods.createSale(contract.nftAddress, tokenId, buyNowPrice).encodeABI()
+            }
+            const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
+            const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+            if (transactionReceipt?.status === true) {
+                LoaderHelper.loaderStatus(false);
+                alertSuccessMessage('Sell Nft Successfully')
+                handleSellStatusSellNow();
+                setActiveScreen('profilePage')
+            }
+        } catch (error) {
+            console.log(error);
             LoaderHelper.loaderStatus(false);
-            $("#checkout_modal").modal('hide');
-            alertSuccessMessage('Sell Nft Successfully')
-            handleSellStatusSellNow();
-        } else {
-
+            alertErrorMessage('Transaction has been reverted by the EVM')
         }
-
     }
 
     const handleSellStatusRent = async () => {
@@ -225,236 +332,222 @@ const NftDetails = (props) => {
         });
     }
 
-
-
     const approveRentNft = async () => {
-        LoaderHelper.loaderStatus(true);
-        const accounts = await web3.eth.getAccounts()
-        // console.log(accounts, 'accountsRajendra');
-        const account = accounts[0]
-        let tokenId = parseInt(props?.userid[0]?.token_id);
-        // console.log(tokenId, 'toke');
-        var hexaDecimal = "0x" + (tokenId).toString(16);
-        const approveTx = await nftContract.methods.approve(contract.marketplaceAddress, hexaDecimal).send({ from: account })
-        // console.log("Tx:sellNft ", approveTx?.status);
-        if (approveTx?.status) {
-            putNftOnRent()
+        try {
+            LoaderHelper.loaderStatus(true);
+            const accounts = await web3.eth.getAccounts()
+            const account = accounts[0]
+            let tokenId = parseInt(props?.userid[0]?.token_id);
+            var hexaDecimal = "0x" + (tokenId).toString(16);
+            const approveTx = await nftContract.methods.approve(contract.marketplaceAddress, hexaDecimal).send({ from: account })
+            if (approveTx?.status) {
+                putNftOnRent()
+                $("#checkout_modal_Rent").modal('hide');
+            }
+        } catch (error) {
+            console.log(error);
+            LoaderHelper.loaderStatus(false);
+            alertErrorMessage(error?.message)
         }
+
     }
 
     const putNftOnRent = async () => {
-        LoaderHelper.loaderStatus(true);
-        const accounts = await web3.eth.getAccounts()
-        const account = accounts[0]
-        let tokenId = parseInt(props?.userid[0]?.token_id);
-        var hexaDecimalToken = "0x" + (tokenId).toString(16);
-        let newTime = userTime * 86400
-        var time = "0x" + newTime.toString(16);//hex format
-        var weiAmtPrice = (1000000000000000000 * RentAmount);
-        var price = "0x" + weiAmtPrice.toString(16);//hex format
-        var ownerPercents = "0x" + ownerPercent.toString(16);//hex format
-        let autoRent = 'true'
-        const tx = await marketplace.methods.putOnRent(time, price, ownerPercents, autoRent, tokenId, contract.nftAddress).send({ from: account })
-        // console.log("Tx:putONRent ", tx);
-        if (tx?.status === true) {
+        try {
+            LoaderHelper.loaderStatus(true);
+            const accounts = await web3.eth.getAccounts()
+            const account = accounts[0]
+            let tokenId = parseInt(props?.userid[0]?.token_id);
+            var hexaDecimalToken = "0x" + (tokenId).toString(16);
+            let newTime = userTime * 86400
+            var time = "0x" + newTime.toString(16);//hex format
+            var weiAmtPrice = (1000000000000000000 * RentAmount);
+            var price = "0x" + weiAmtPrice.toString(16);//hex format
+            var ownerPercents = "0x" + ownerPercent.toString(16);//hex format
+            let autoRent = 'true'
+            const tx = await marketplace.methods.putOnRent(time, price, ownerPercents, autoRent, tokenId, contract.nftAddress).send({ from: account })
+            if (tx?.status === true) {
+                LoaderHelper.loaderStatus(false);
+                alertSuccessMessage('Successfully Rented');
+                handleSellStatusRent();
+                setActiveScreen('profilePage')
+            }
+        } catch (error) {
+            console.log(error);
             LoaderHelper.loaderStatus(false);
-            alertSuccessMessage('Successfully Rented');
-            handleSellStatusRent();
-            $("#checkout_modal_Rent").modal('hide');
+            alertErrorMessage(error?.message)
         }
     }
-
 
     const approveNftCentralizedRent = async () => {
-        LoaderHelper.loaderStatus(true);
-        const privateKeyOfwallet = '0x0e20a03cd80f0780a0c4cfe3d5260745b0a83c9ee90f2f7fc092cddf5c5d761e' //Private key of wallet goes here
-        const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
-        const contract_address = "0xD081A82179bdC6ecc25Fbfa8D956E06BbC8F3437" // NFt contract address
-        let tokenId = parseInt(props?.userid[0]?.token_id);  //convert to hex
-        const tx = {
-            from: address, // Wallet address
-            to: contract_address, // Contract address of battle infinity
-            gas: 1000000,
-            data: await nftContract.methods.approve(contract.marketplaceAddress, tokenId).encodeABI()
+        try {
+            LoaderHelper.loaderStatus(true);
+            const privateKeyOfwallet = dcryptPrivateKey //Private key of wallet goes here
+            const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
+            const contract_address = "0xD081A82179bdC6ecc25Fbfa8D956E06BbC8F3437" // NFt contract address
+            let tokenId = parseInt(props?.userid[0]?.token_id);  //convert to hex
+            const tx = {
+                from: address, // Wallet address
+                to: contract_address, // Contract address of battle infinity
+                gas: 1000000,
+                data: await nftContract.methods.approve(contract.marketplaceAddress, tokenId).encodeABI()
+            }
+            const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
+            const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+            if (transactionReceipt?.status) {
+                putNftOnRentCentralized()
+                $("#checkout_modal_Rent").modal('hide');
+            }
+        } catch (error) {
+            console.log(error, 'Error');
+            LoaderHelper.loaderStatus(false);
+            alertErrorMessage(error?.message)
         }
-        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
-        const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-        if (transactionReceipt?.status) {
-            putNftOnRentCentralized()
-            // console.log(transactionReceipt, 'transactionReceipt');
-        } else {
-            alertErrorMessage('Something Went Wrong');
-        }
-    }
 
+    }
 
     const putNftOnRentCentralized = async () => {
-        LoaderHelper.loaderStatus(true);
-        const contract_interaction = new web3.eth.Contract(contract.marketplaceAbi, contract.marketplaceAddress)
-        const privateKeyOfwallet = '0x0e20a03cd80f0780a0c4cfe3d5260745b0a83c9ee90f2f7fc092cddf5c5d761e' //Private key of wallet goes here
-        const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
-        const contract_address = "0xD081A82179bdC6ecc25Fbfa8D956E06BbC8F3437" // Auction contract address
-        let tokenId = parseInt(props?.userid[0]?.token_id);//convert to hex
-        let newTime = userTime * 86400
-        var time = "0x" + newTime.toString(16);//hex format
-        var weiAmtPrice = (1000000000000000000 * RentAmount);
-        var price = "0x" + weiAmtPrice.toString(16);//hex format
-        var ownerPercents = "0x" + ownerPercent.toString(16);//hex format
-        let autoRent = 'true'
-        const tx = {
-            from: address, // Wallet address
-            to: contract_address, // Contract address of battle infinity
-            gas: 1000000,
-            data: await contract_interaction.methods.putOnRent(time, price, ownerPercents, autoRent, tokenId, contract.nftAddress).encodeABI()
-        }
-        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
-        const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-        if (transactionReceipt?.status === true) {
+        try {
+            LoaderHelper.loaderStatus(true);
+            const contract_interaction = new web3.eth.Contract(contract.marketplaceAbi, contract.marketplaceAddress)
+            const privateKeyOfwallet = dcryptPrivateKey //Private key of wallet goes here
+            const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
+            const contract_address = "0x4b80Efd0087F255DAf1F4b43D99948b0e6356481" // Auction contract address
+            let tokenId = parseInt(props?.userid[0]?.token_id);//convert to hex
+            let newTime = userTime * 86400
+            var time = "0x" + newTime.toString(16);//hex format
+            var weiAmtPrice = (1000000000000000000 * RentAmount);
+            var price = "0x" + weiAmtPrice.toString(16);//hex format
+            var ownerPercents = "0x" + ownerPercent.toString(16);//hex format
+            let autoRent = 'true'
+            const tx = {
+                from: address, // Wallet address
+                to: contract_address, // Contract address of battle infinity
+                gas: 1000000,
+                data: await contract_interaction.methods.putOnRent(time, price, ownerPercents, autoRent, tokenId, contract.nftAddress).encodeABI()
+            }
+            const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
+            const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+            if (transactionReceipt?.status === true) {
+                LoaderHelper.loaderStatus(false);
+                handleSellStatusRent();
+                alertSuccessMessage('Successfully Rented');
+                setActiveScreen('profilePage')
+            }
+        } catch (error) {
+            console.log(error, 'Error');
             LoaderHelper.loaderStatus(false);
-            handleSellStatusRent();
-            alertSuccessMessage('Successfully Rented');
-            $("#checkout_modal_Rent").modal('hide');
+            alertErrorMessage('MinPrice &gt; 80% of BuyNowPrice')
         }
     }
-
 
     const approveMakeanOffer = async () => {
-        LoaderHelper.loaderStatus(true);
-        const accounts = await web3.eth.getAccounts()
-        // console.log(accounts, 'accountsRajendra');
-        const account = accounts[0]
-        let tokenId = parseInt(props?.userid[0]?.token_id);
-        // console.log(tokenId, 'toke');
-        var hexaDecimal = "0x" + (tokenId).toString(16);
-        const approveTx = await nftContract.methods.approve(contract.marketplaceAddress, hexaDecimal).send({ from: account })
-        // console.log("Tx:sellNft ", approveTx?.status);
-        if (approveTx?.status === true) {
-            createAuction()
-        } else {
-            alertErrorMessage('Something Went Wrong');
+        try {
+            LoaderHelper.loaderStatus(true);
+            const accounts = await web3.eth.getAccounts()
+            const account = accounts[0]
+            let tokenId = parseInt(props?.userid[0]?.token_id);
+            var hexaDecimal = "0x" + (tokenId).toString(16);
+            const approveTx = await nftContract.methods.approve(contract.marketplaceAddress, hexaDecimal).send({ from: account })
+            if (approveTx?.status === true) {
+                createAuction()
+                $("#Auction_Now_Model").modal('hide');
+            }
+        } catch (error) {
+            console.log(error);
+            LoaderHelper.loaderStatus(false);
+            alertErrorMessage(error?.message)
         }
     }
-    const date = new Date();
-    let rajendra =  date.setDate(date.getDate() + 1);
 
-    // let rajendra =  Math.floor(new Date().getTime()/1000.0 + 1);
-
-
+    const rajendra = new Date().getTime() + (bidPeriod * 86400000);
+    
     const createAuction = async () => {
-        const accounts = await web3.eth.getAccounts()
-        const account = accounts[0]
-        let tokenId = parseInt(props?.userid[0]?.token_id);
-        var hexaDecimalToken = "0x" + (tokenId).toString(16);
-
-        var weiAmtPrice = (1000000000000000000 * minimumPrice);
-        let minPrice = "0x" + weiAmtPrice.toString(16); //hex format
-
-        var weiAmtBuyPrice = (1000000000000000000 * buyPrice);
-        let buyNowPrice = "0x" + weiAmtBuyPrice.toString(16); //hex format
-
-        // let newTime = bidPeriod  * 86400
-        var bidPeriods = rajendra
-        // console.log(bidPeriods, 'bidPeriods');
-
-        const tx = await marketplace.methods.createNewNftAuction(contract.nftAddress, tokenId, minPrice, buyNowPrice, bidPeriods).send({ from: account })
-        // console.log("Tx:auction ", tx);/
-        if (tx?.status === true) {
+        try {
+            const accounts = await web3.eth.getAccounts()
+            const account = accounts[0]
+            let tokenId = parseInt(props?.userid[0]?.token_id);
+            var hexaDecimalToken = "0x" + (tokenId).toString(16);
+            var weiAmtPrice = (1000000000000000000 * minimumPrice);
+            let minPrice = "0x" + weiAmtPrice.toString(16); //hex format
+            var weiAmtBuyPrice = (1000000000000000000 * buyPrice);
+            let buyNowPrice = "0x" + weiAmtBuyPrice.toString(16); //hex format
+            var bidPeriods = rajendra
+            const tx = await marketplace.methods.createNewNftAuction(contract.nftAddress, tokenId, minPrice, buyNowPrice, bidPeriods).send({ from: account })
+            if (tx?.status === true) {
+                LoaderHelper.loaderStatus(false);
+                alertSuccessMessage('Successfully Created Auction')
+                handleSellStatusAuctionNow();
+                setActiveScreen('profilePage')
+            }
+        } catch (error) {
+            console.log(error);
             LoaderHelper.loaderStatus(false);
-            alertSuccessMessage('Successfully Created Auction')
-            handleSellStatusAuctionNow();
-            $("#Auction_Now_Model").modal('hide');
+            alertErrorMessage(error?.message)
         }
     }
 
     const approveMakeanOfferCenterLized = async () => {
-        alertSuccessMessage('approveMakeanOfferCenterLized')
-        LoaderHelper.loaderStatus(true);
-        const privateKeyOfwallet = '0x0e20a03cd80f0780a0c4cfe3d5260745b0a83c9ee90f2f7fc092cddf5c5d761e' //Private key of wallet goes here
-        const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
-        const contract_address = "0xD081A82179bdC6ecc25Fbfa8D956E06BbC8F3437" // NFt contract address
-        let tokenId = parseInt(props?.userid[0]?.token_id);  //convert to hex
-        const tx = {
-            from: address, // Wallet address
-            to: contract_address, // Contract address of battle infinity
-            gas: 1000000,
-            data: await nftContract.methods.approve(contract.marketplaceAddress, tokenId).encodeABI()
-        }
-        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
-        const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-        // console.log(transactionReceipt, 'transactionReceipt');
-        if (transactionReceipt?.status) {
-            createAuctionCentralized()
-
-        } else {
-            alertErrorMessage('Something Went Wrong');
+        try {
+            LoaderHelper.loaderStatus(true);
+            const privateKeyOfwallet = dcryptPrivateKey //Private key of wallet goes here
+            const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
+            const contract_address = "0xD081A82179bdC6ecc25Fbfa8D956E06BbC8F3437" // NFt contract address
+            let tokenId = parseInt(props?.userid[0]?.token_id);  //convert to hex
+            const tx = {
+                from: address, // Wallet address
+                to: contract_address, // Contract address of battle infinity
+                gas: 1000000,
+                data: await nftContract.methods.approve(contract.marketplaceAddress, tokenId).encodeABI()
+            }
+            const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
+            const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+            if (transactionReceipt?.status) {
+                createAuctionCentralized()
+                $("#Auction_Now_Model").modal('hide');
+            }
+        } catch (error) {
+            console.log(error);
+            LoaderHelper.loaderStatus(false);
+            alertErrorMessage(error?.message)
         }
     }
 
     const createAuctionCentralized = async () => {
-        alertSuccessMessage('createAuctionCentralized');
-        const contract_interaction = new web3.eth.Contract(contract.marketplaceAbi, contract.marketplaceAddress)
-        const privateKeyOfwallet = '0x0e20a03cd80f0780a0c4cfe3d5260745b0a83c9ee90f2f7fc092cddf5c5d761e' //Private key of wallet goes here
-        const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
-        const contract_address = "0x285c228c12De73eC351EF73B3cD3D8427ed825aa" // Auction contract address
-        let tokenId = parseInt(props?.userid[0]?.token_id);
-        var hexaDecimalToken = "0x" + (tokenId).toString(16);
-        var weiAmtPrice = (1000000000000000000 * minimumPrice);
-        let minPrice = "0x" + weiAmtPrice.toString(16); //hex format
-        var weiAmtBuyPrice = (1000000000000000000 * buyPrice);
-        let buyNowPrice = "0x" + weiAmtBuyPrice.toString(16); //hex format
-        // let newTime = bidPeriod  * 86400
-        var bidPeriods = rajendra
-        const tx = {
-            from: address, // Wallet address
-            to: contract_address, // Contract address of battle infinity
-            gas: 1000000,
-            data: await contract_interaction.methods.createNewNftAuction(contract.nftAddress, tokenId, minPrice, buyNowPrice, bidPeriods).encodeABI()
-        }
-        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
-        const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-        // console.log(transactionReceipt, 'transactionReceipt');
-
-        if (transactionReceipt?.status === true) {
+        try {
+            const contract_interaction = new web3.eth.Contract(contract.marketplaceAbi, contract.marketplaceAddress)
+            const privateKeyOfwallet = dcryptPrivateKey //Private key of wallet goes here
+            const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
+            const contract_address = "0x4b80Efd0087F255DAf1F4b43D99948b0e6356481" // Auction contract address
+            let tokenId = parseInt(props?.userid[0]?.token_id);
+            var hexaDecimalToken = "0x" + (tokenId).toString(16);
+            var weiAmtPrice = (1000000000000000000 * minimumPrice);
+            let minPrice = "0x" + weiAmtPrice.toString(16); //hex format
+            var weiAmtBuyPrice = (1000000000000000000 * buyPrice);
+            let buyNowPrice = "0x" + weiAmtBuyPrice.toString(16); //hex format
+            // let newTime = bidPeriod  * 86400
+            var bidPeriods = rajendra
+            const tx = {
+                from: address, // Wallet address
+                to: contract_address, // Contract address of battle infinity
+                gas: 1000000,
+                data: await contract_interaction.methods.createNewNftAuction(contract.nftAddress, tokenId, minPrice, buyNowPrice, bidPeriods).encodeABI()
+            }
+            const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
+            const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+            if (transactionReceipt?.status === true) {
+                LoaderHelper.loaderStatus(false);
+                handleSellStatusAuctionNow();
+                alertSuccessMessage('Successfully Auction');
+                setActiveScreen('profilePage')
+            }
+        } catch (error) {
+            console.log(error);
             LoaderHelper.loaderStatus(false);
-            handleSellStatusAuctionNow();
-            alertSuccessMessage('Successfully Auction');
-            $("#Auction_Now_Model").modal('hide');
+            alertErrorMessage(error?.message)
         }
     }
 
-
-    const takeHighestBid = async (Id) => {
-        alertSuccessMessage(Id)
-        const accounts = await web3.eth.getAccounts()
-        const account = accounts[0]
-        let tokenId = parseInt(Id);
-        var hexaDecimalToken = "0x" + (tokenId).toString(16);
-        const tx = await marketplace.methods.takeHighestBid(contract.nftAddress, tokenId).send({ from: account })
-        // console.log("Tx:bid ", tx);
-    }
-
-
-    const takeHighestBidCentralized = async (Id) => {
-        alertSuccessMessage(Id)
-        const contract_interaction = new web3.eth.Contract(contract.marketplaceAbi, contract.marketplaceAddress)
-        const privateKeyOfwallet = '0x0e20a03cd80f0780a0c4cfe3d5260745b0a83c9ee90f2f7fc092cddf5c5d761e' //Private key of wallet goes here
-        const address = await web3.eth.accounts.privateKeyToAccount(privateKeyOfwallet).address;
-        const contract_address = "0x285c228c12De73eC351EF73B3cD3D8427ed825aa" // Auction contract address
-        let tokenId = parseInt(Id); //convert to hex
-        const tx = {
-            from: address, // Wallet address
-            to: contract_address, // Contract address of battle infinity
-            gas: 1000000,
-
-            data: await contract_interaction.methods.rent(contract.nftAddress, tokenId).encodeABI()
-        }
-        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyOfwallet);
-        const transactionReceipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-        // console.log(transactionReceipt, 'transactionReceipt');
-    }
-
-    const [reportReason, setReportReason] = useState('')
-    const [description, setDescription] = useState('')
 
     const handleCollectionDetailsReport = async (reportReason, description) => {
         await AuthService.nftDetailsReport(props?.userid[0]?._id, reportReason, description).then(async result => {
@@ -465,23 +558,15 @@ const NftDetails = (props) => {
         });
     }
 
-    const [favouriteDataList, setFavouriteDataList] = useState([])
-
     const handleFavouriteData = async () => {
         await AuthService.getFavouriteData().then(async result => {
             if (result.success) {
-                try {
-                    // alertSuccessMessage(result?.message)
-                    setFavouriteDataList(result?.data)
-                } catch (error) {
-                    // alertErrorMessage(result.message);
-                }
+                setFavouriteDataList(result?.data)
             } else {
                 // alertErrorMessage(result.message);
             }
         });
     }
-
 
     const handleAddFavourite = async (status) => {
         await AuthService.setFavouriteDataNft(props?.userid[0]?.id, status).then(async result => {
@@ -493,12 +578,8 @@ const NftDetails = (props) => {
         });
     }
 
-
-
-    console.log(props,'props');
-
     return (
-        screenTab === "nftDetails" ?
+        activeScreen === "nftDetails" ?
             <>
                 <div class="page_wrapper" ref={messagesEndRef}>
                     <section class="product-details section-bg-separation-2 pt-125 pb-90">
@@ -511,12 +592,20 @@ const NftDetails = (props) => {
                                                 <span>12</span>
                                                 <i class="ri-heart-line"></i>
                                             </button>
-                                            <button class="reaction-btn total-watch left" data-bs-toggle="tooltip" data-bs-placement="top" title="Total Watch">
-                                                <img src="images/eth_white.svg" width="22" height="22" />
-                                            </button>
+                                            <div className="d-flex align-items-center" >
+                                                {/* <button class="reaction-btn total-watch left" data-bs-toggle="tooltip" data-bs-placement="top" title="Total Watch">
+                                                    <img src="images/eth_white.svg" width="22" height="22" />
+                                                </button> */}
+                                                <button class="reaction-btn liked left ps-0" onClick={handleScreenTan}  >
+                                                    <i class="ri-arrow-left-line ps-0 pe-2"></i>
+                                                    <span>Back</span>
+                                                </button>
+                                            </div>
                                         </div>
                                         <div class="thumb">
-                                            <img src={`${ApiConfig.baseUrl + props?.userid[0]?.file}`} class="img-fluid" />
+                                            <div className="ratio ratio-1x1" >
+                                                <img src={`${ApiConfig.baseUrl + props?.userid[0]?.file}`} class="img-fluid" />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -538,17 +627,17 @@ const NftDetails = (props) => {
                                                             <li><Link class="dropdown-item" to="https://web.whatsapp.com/" target='_blank'> <i class="ri-whatsapp-fill me-2"></i> Share On Whatsapp</Link></li>
                                                         </ul>
                                                     </li>
-                                                    <li class="dropdown">
+                                                    {/* <li class="dropdown">
                                                         <Link class="btn-icon" to="#" target="_blank" >
                                                             <i class="ri-fullscreen-fill"></i>
                                                         </Link>
-                                                    </li>
+                                                    </li> */}
                                                     <li class="dropdown">
                                                         <Link class="btn-icon" to="#" role="button" id="dropdownMenuLink2" data-bs-toggle="dropdown" aria-expanded="false">
                                                             <i class="ri-more-fill"></i>
                                                         </Link>
                                                         <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink2">
-                                                            <li><Link class="dropdown-item" to="/settings"> <i class="ri-settings-3-line me-2"></i> Settings</Link></li>
+                                                            <li><Link class="dropdown-item" to="/update_profile"> <i class="ri-settings-3-line me-2"></i> Settings</Link></li>
                                                             <li><Link class="dropdown-item" to="#"> <i class="ri-list-check-2 me-2"></i> Featured items</Link></li>
                                                             <li><Link class="dropdown-item" to="" > <i class="ri-flag-fill me-2"></i> <span data-bs-toggle="modal" data-bs-target="#reportmodal"  >Report</span>  </Link></li>
                                                         </ul>
@@ -557,21 +646,82 @@ const NftDetails = (props) => {
                                             </div>
                                         </div>
                                         <h2 class="main_title mb-0">{props?.userid[0]?.token_id}</h2>
-                                        <p class="subtitle">Owneds by <Link to="#" >{props?.userid[0]?.name}</Link></p>
+                                        <p class="subtitle">Owned by <Link to="#" >{props?.userid[0]?.name}</Link></p>
                                         <div class="view_count d-flex-center" > <i class="ri-eye-line me-2"></i> 0 View</div>
                                         <div class="custom-tab-content mt-7" >
                                             <div class="sale_counter">  </div>
                                             <div class="bid_price" >
-                                                <div class="row gx-2" >
-                                                    <div class="col-md-4" >
-                                                        <Link data-bs-toggle="modal" data-bs-target="#checkout_modal" to="#" class="btn  btn-lg btn-gradient w-100 justify-content-center mt-6 btn-border-gradient"><span> Sell now </span></Link>
+
+
+                                                {props?.userid[0]?.sell_type === 'on_sell' || props?.userid[0]?.sell_type === 'on_rent' || props?.userid[0]?.sell_type === 'on_auction' ?
+                                                    <>
+                                                        <div class="row gx-2" >
+                                                            <div class="col-md-4" >
+                                                                <Link data-bs-toggle="modal" class="btn  btn-lg btn-gradient w-100 justify-content-center disabled  btn-border-gradient">
+                                                                    {
+                                                                        props?.userid[0]?.sell_type === 'on_sell' ? <span> ON SELL </span> : <span> SELL NOW </span>
+                                                                    }
+                                                                </Link>
+                                                            </div>
+                                                            <div class="col-md-4" >
+                                                                <Link data-bs-toggle="modal" class="btn  btn-lg btn-gradient w-100 justify-content-center disabled btn-border-gradient">
+                                                                    {
+                                                                        props?.userid[0]?.sell_type === 'on_rent' ? <span> ON RENT </span> : <span> RENT NOW </span>
+                                                                    }
+                                                                </Link>
+                                                            </div>
+                                                            <div class="col-md-4" >
+                                                                <Link data-bs-toggle="modal" class="btn  btn-lg btn-gradient w-100 disabled justify-content-center  btn-border-gradient" >
+                                                                    {
+                                                                        props?.userid[0]?.sell_type === 'on_auction' ? <span> ON Auction </span> : <span> AUCTION NOW </span>
+                                                                    }
+                                                                </Link>
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                    :
+                                                    <div class="row gx-2" >
+                                                        <div class="col-md-4" >
+                                                            {
+
+                                                                walletType === 'centralized' ?
+                                                                    <Link data-bs-toggle="modal" data-bs-target="#enterpasswordmodal" to="#" class="btn  btn-lg btn-gradient w-100 justify-content-center mt-6 btn-border-gradient" onClick={handlebuttonSellType}>
+                                                                        <span> Sell now </span>
+                                                                    </Link>
+                                                                    :
+                                                                    <Link data-bs-toggle="modal" data-bs-target="#checkout_modal" to="#" class="btn  btn-lg btn-gradient w-100 justify-content-center mt-6 btn-border-gradient">
+                                                                        <span> Sell now </span>
+                                                                    </Link>
+
+                                                            }
+                                                        </div>
+                                                        <div class="col-md-4" >
+                                                            {
+                                                                walletType === 'centralized' ?
+                                                                    <Link data-bs-toggle="modal" data-bs-target="#enterpasswordmodal" to="#" class="btn  btn-lg btn-gradient w-100 justify-content-center mt-6 btn-border-gradient" onClick={handlebuttonRentType}>
+                                                                        <span> Rent now </span>
+                                                                    </Link>
+                                                                    :
+                                                                    <Link data-bs-toggle="modal" data-bs-target="#checkout_modal_Rent" to="#" class="btn  btn-lg btn-gradient w-100 justify-content-center mt-6 btn-border-gradient">
+                                                                        <span> Rent now </span>
+                                                                    </Link>
+                                                            }
+                                                        </div>
+                                                        <div class="col-md-4" >
+                                                            {
+                                                                walletType === 'centralized' ?
+                                                                    <Link data-bs-toggle="modal" data-bs-target="#enterpasswordmodal" to="#" class="btn  btn-lg btn-gradient w-100 justify-content-center mt-6 btn-border-gradient" onClick={handlebuttonAuctionType}>
+                                                                        <span> Auction now </span>
+                                                                    </Link>
+                                                                    :
+                                                                    <Link data-bs-toggle="modal" data-bs-target="#Auction_Now_Model" to="#" class="btn  btn-lg btn-gradient w-100 justify-content-center mt-6 btn-border-gradient">
+                                                                        <span> Auction now </span>
+                                                                    </Link>
+                                                            }
+                                                        </div>
                                                     </div>
-                                                    <div class="col-md-4" >
-                                                        <Link data-bs-toggle="modal" data-bs-target="#checkout_modal_Rent" to="#" class="btn  btn-lg btn-gradient w-100 justify-content-center mt-6 btn-border-gradient"><span> Rent now </span></Link>
-                                                    </div> <div class="col-md-4" >
-                                                        <Link data-bs-toggle="modal" data-bs-target="#Auction_Now_Model" to="#" class="btn  btn-lg btn-gradient w-100 justify-content-center mt-6 btn-border-gradient"><span> Auction now </span></Link>
-                                                    </div>
-                                                </div>
+
+                                                }
                                             </div>
                                         </div>
                                     </div>
@@ -584,7 +734,7 @@ const NftDetails = (props) => {
                                             <p class="mb-0  d-flex-center"><i class="ri-file-list-line me-3"></i> Description</p>
                                         </div>
                                         <div class="list-body border-top" >
-                                            <p class="mb-0">By <strong><Link to="#" > TheMonkeyFaceMan </Link></strong></p>
+                                            <p class="mb-0">By <strong><Link to="#" > {props?.userid[0]?.name} </Link></strong></p>
                                             <p class="mb-0" >{metaData?.description}</p>
                                         </div>
                                         <div class="accordion" id="accordionnft_details">
@@ -603,7 +753,6 @@ const NftDetails = (props) => {
                                                                         <div class="sc_body" >
                                                                             <div class="sc_sub" >{data?.trait_type}</div>
                                                                             <p class="sc_title" >{data?.value}</p>
-                                                                            <span class="sc_footer" >655%  have this trait</span>
                                                                         </div>
                                                                     </Link>
                                                                 )
@@ -615,12 +764,12 @@ const NftDetails = (props) => {
                                             <div class="accordion-item">
                                                 <p class="accordion-header" id="About_acc">
                                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                                                        <i class="ri-list-check-2 me-3"></i> About Samurai Club
+                                                        <i class="ri-list-check-2 me-3"></i> About {userDetails?.username}
                                                     </button>
                                                 </p>
                                                 <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="About_acc" data-bs-parent="#accordionnft_details">
                                                     <div class="accordion-body">
-                                                        <strong>This is the second item's accordion body.</strong> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
+                                                        <strong>{userDetails?.profile_description}</strong>
                                                     </div>
                                                 </div>
                                             </div>
@@ -634,11 +783,9 @@ const NftDetails = (props) => {
                                                     <div class="accordion-body">
                                                         <ul class="sc_list" >
                                                             <li>Token address <span><Link to="#" >{nftDetails?.token_address}</Link></span></li>
-                                                            <li>Token ID <span><Link to="#" >{nftDetails?.token_id
-                                                            }</Link></span></li>
+                                                            <li>Token ID <span><Link to="#" >{nftDetails?.token_id}</Link></span></li>
                                                             <li>Token Standard <span>{nftDetails?.contract_type}</span></li>
-                                                            <li>Chain <span>BSC</span></li>
-                                                            <li>Metadata <span>centralized</span></li>
+                                                            <li>Token Type <span>{walletType}</span></li>
                                                             <li>Creator Fee <span>0%</span></li>
                                                         </ul>
                                                     </div>
@@ -868,23 +1015,23 @@ const NftDetails = (props) => {
                 </div>
 
                 {/* < !--Place a bit Modal Sell-- > */}
-                <div class="modal fade" id="checkout_modal" tabindex="-1" aria-labelledby="checkout_modalLabel" aria-hidden="true">
+                <div class="modal fade" id="checkout_modal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="checkout_modalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content">
                             <div class="modal-header no-border flex-column px-8">
-                                <h3 class="modal-title" id="checkout_modalLabel">Checkout</h3>
+                                <h3 class="modal-title" id="checkout_modalLabel">Checkout Sell</h3>
                                 <button type="button" class="btn-custom-closer" data-bs-dismiss="modal" aria-label="Close"><i
                                     class="ri-close-fill"></i></button>
                             </div>
                             <div class="modal-body px-8 ">
                                 <div class="single-item-history d-flex-center no-border">
                                     <Link to="#" class="avatar">
-                                        <img src="images/popular/small/4.png" alt="history" />
+                                        <img src={`${ApiConfig.baseUrl + props?.userid[0]?.file}`} class="img-fluid" />
                                     </Link>
                                     <div class="content">
-                                        <p class="text-white"> You are about to purchase a <Link class="text-white" to="Profile.html">Exclusive Samurai</Link>
+                                        <p class="text-white"> You are about to Sell an <Link class="text-white" to="#"> {props?.userid[0]?.name}</Link>
                                             <br />
-                                            <small>{props?.userid[0]?.token_id}, from <Link class="text-white" to="#" >{props?.userid[0]?.name}</Link> </small>
+                                            <small>{props?.userid[0]?.token_id}</small>
                                         </p>
                                     </div>
                                 </div>
@@ -898,13 +1045,12 @@ const NftDetails = (props) => {
                                                     </Link>
                                                 </div>
                                                 <div class="content">
-                                                    <h4 class="title pb-1 "><Link className="max_txt" to="#">
-                                                        {address}</Link>
+                                                    <h4 class="title pb-1 ">
+                                                        <Link className="max_txt" to="#"> {address ? address : walletAddress}</Link>
                                                     </h4>
-                                                    <span class="owner">BNB</span>
                                                 </div>
                                             </div>
-                                            {/* <span class="cc_status connect" >Highest Bid</span> */}
+                                            {/* <span class="cc_status connect">Highest Bid</span> */}
                                         </div>
                                     </div>
 
@@ -916,19 +1062,27 @@ const NftDetails = (props) => {
                                 </form>
                                 <div class="form-group mt-4">
                                     <input type="number" id="bit" placeholder="Enter Amount" value={sellAmount} onChange={(e) => { setsellAmount(e.target.value) }} />
+                                    {
+                                        sellAmount ?
+                                            sellAmount <= 0 ?
+                                                <span className="mt-3" style={{ color: 'red' }}>Please Enter Price Greater Then 0</span>
+                                                :
+                                                null
+                                            :
+                                            null
+                                    }
                                 </div>
                             </div>
                             {
-                                walletAddress === '0xC1fEec289C4110A103F7A3F759cFA7a61d18a173' ?
-
+                                walletType === 'centralized' ?
                                     <div class="modal-footer no-border px-8 pb-5">
-                                        <button disabled={sellAmount ? false : true} type="button" class="btn btn-gradient btn-lg w-100 justify-content-center"
-                                            onClick={() => approveNftCentralized()}><span>Sell Now</span></button>
+                                        <button type="button" class="btn btn-gradient btn-lg w-100 justify-content-center"
+                                            onClick={() => approveNftCentralized()} disabled={sellAmount <= 0} ><span>Sell Now</span></button>
                                     </div>
                                     :
                                     <div class="modal-footer no-border px-8 pb-5">
-                                        <button disabled={sellAmount ? false : true} type="button" class="btn btn-gradient btn-lg w-100 justify-content-center"
-                                            onClick={() => approveNft()}><span>Sell Now</span></button>
+                                        <button type="button" class="btn btn-gradient btn-lg w-100 justify-content-center"
+                                            onClick={() => approveNft()} disabled={sellAmount <= 0}><span>Sell Now</span></button>
                                     </div>
                             }
                         </div>
@@ -936,21 +1090,21 @@ const NftDetails = (props) => {
                 </div>
 
                 {/* rent now model */}
-                <div class="modal fade" id="checkout_modal_Rent" tabindex="-1" aria-labelledby="checkout_modalLabel" aria-hidden="true">
+                <div class="modal fade" id="checkout_modal_Rent" tabindex="-1" data-bs-backdrop="static" aria-labelledby="checkout_modalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content">
                             <div class="modal-header no-border flex-column px-8">
-                                <h3 class="modal-title" id="checkout_modalLabel">Checkout</h3>
+                                <h3 class="modal-title" id="checkout_modalLabel">Checkout Rent</h3>
                                 <button type="button" class="btn-custom-closer" data-bs-dismiss="modal" aria-label="Close"><i
                                     class="ri-close-fill"></i></button>
                             </div>
                             <div class="modal-body px-8 ">
                                 <div class="single-item-history d-flex-center no-border">
                                     <Link to="#" class="avatar">
-                                        <img src="images/popular/small/4.png" alt="history" />
+                                        <img src={`${ApiConfig.baseUrl + props?.userid[0]?.file}`} />
                                     </Link>
                                     <div class="content">
-                                        <p class="text-white"> You are about to purchase a <Link class="text-white" to="#">{props?.userid[0]?.token_id}</Link>
+                                        <p class="text-white"> You are about to Rent an <Link class="text-white" to="#">{props?.userid[0]?.token_id}</Link>
                                             <br />
                                             <small>from <Link class="text-white" to="#" > {props?.userid[0]?.name}</Link> </small>
                                         </p>
@@ -962,7 +1116,7 @@ const NftDetails = (props) => {
                                             <div class="d-flex-center avatar-info">
                                                 <div class="thumb-wrapper">
                                                     <Link to="#" class="thumb no-border">
-                                                        {/* <img src="images/eth_bg.png" alt="top sellter" /> */}
+                                                        <img src="images/eth_bg.png" alt="top sellter" />
                                                     </Link>
                                                 </div>
                                                 <div class="content">
@@ -971,7 +1125,7 @@ const NftDetails = (props) => {
                                                             {!address ? walletAddress : address}
                                                         </Link>
                                                     </h4>
-                                                    <span class="owner">BNB</span>
+                                                    {/* <span class="owner">BNB</span> */}
                                                 </div>
                                             </div>
                                             {/* <span class="cc_status connect" >Highest Bid</span> */}
@@ -983,24 +1137,32 @@ const NftDetails = (props) => {
                                 </form>
                                 <div class="form-group mt-4">
                                     <input type="number" id="bit" placeholder="Enter Amount" value={RentAmount} onChange={(e) => setRentAmount(e.target.value)} />
+
+                                    {
+                                        RentAmount ?
+                                            RentAmount <= 0 ?
+                                                <span className="text-danger mt-2">Please Enter Amount Greater Then 0</span>
+                                                :
+                                                null
+                                            :
+                                            null
+                                    }
                                 </div>
                                 <div class="form-group mt-4">
                                     {/* {userTime < 1 ? alertErrorMessage('Minimum Rent period is one day') : null} */}
-                                    <input type="text" id="bit" placeholder="Enter Time period in days" value={userTime} onChange={(e) => setUserTime(e.target.value)} />
+                                    <input type="number" id="bit" placeholder="Enter Time period in days" value={userTime} onChange={(e) => setUserTime(e.target.value)} />
                                 </div>
                                 <div class="form-group mt-4">
-                                    <input type="text" id="bit" placeholder="Enter Owner Percent" value={ownerPercent} onChange={(e) => setOwnerPercent(e.target.value)} />
+                                    <input type="number" id="bit" placeholder="Enter Owner Percent" value={ownerPercent} onChange={(e) => setOwnerPercent(e.target.value)} />
                                 </div>
                             </div>
                             <div class="modal-footer no-border px-8 pb-5">
                                 {
-                                    walletAddress === '0xC1fEec289C4110A103F7A3F759cFA7a61d18a173' ?
+                                    walletType === 'centralized' ?
 
-                                        <button disabled={RentAmount ? false : true} type="button" class="btn btn-gradient btn-lg w-100 justify-content-center"
-                                            onClick={() => approveNftCentralizedRent()}><span>Rent now</span></button>
+                                        <button type="button" class="btn btn-gradient btn-lg w-100 justify-content-center" onClick={() => approveNftCentralizedRent()} disabled={RentAmount <= 0 || !userTime}><span>Rent now</span></button>
                                         :
-                                        <button disabled={RentAmount ? false : true} type="button" class="btn btn-gradient btn-lg w-100 justify-content-center"
-                                            onClick={() => approveRentNft()}><span>Rent now</span></button>
+                                        <button type="button" class="btn btn-gradient btn-lg w-100 justify-content-center" onClick={() => approveRentNft()} disabled={RentAmount <= 0}><span>Rent now</span></button>
                                 }
                             </div>
                         </div>
@@ -1009,7 +1171,7 @@ const NftDetails = (props) => {
 
 
                 {/* Auction model */}
-                <div class="modal fade" id="Auction_Now_Model" tabindex="-1" aria-labelledby="make_offoer_modalLabel" aria-hidden="true">
+                <div class="modal fade" id="Auction_Now_Model" tabindex="-1" data-bs-backdrop="static" aria-labelledby="make_offoer_modalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content">
                             <div class="modal-header no-border flex-column px-8">
@@ -1020,11 +1182,11 @@ const NftDetails = (props) => {
                             <div class="modal-body px-8 ">
                                 <div class="single-item-history d-flex-center no-border">
                                     <Link to="#" class="avatar">
-                                        <img src="images/popular/small/4.png" alt="history" />
+                                        <img src={`${ApiConfig.baseUrl + props?.userid[0]?.file}`} />
                                     </Link>
                                     <div class="content">
-                                        <p class="text-white">Exclusive Samurai Club {props?.userid[0]?.token_id}<br />
-                                            <small>{props?.userid[0]?.name}</small>
+                                        <p class="text-white"><b>{props?.userid[0]?.name}</b> {props?.userid[0]?.token_id}<br />
+                                            {/* <small>{props?.userid[0]?.name}</small> */}
                                         </p>
                                     </div>
                                     {/* <span class="date align-self-center text-end">0.000255 ETH <br /> <small>$1,091.98</small></span> */}
@@ -1040,22 +1202,28 @@ const NftDetails = (props) => {
                                         </ul>
                                     </div>
                                     <div class="form-group input-group">
-                                        <input type="text" class="form-control" placeholder="Minimum Price" aria-label="Recipient's username" aria-describedby="basic-addon2" value={minimumPrice} onChange={(e) => setMinimumPrice(e.target.value)} />
+                                        <input type="number" class="form-control" placeholder="Minimum Price" aria-label="Recipient's username" aria-describedby="basic-addon2" value={minimumPrice} onChange={(e) => setMinimumPrice(e.target.value)} />
+
                                     </div>
                                     <div class="form-group input-group mt-2">
-                                        <input type="text" class="form-control" placeholder="Buy Now Price" aria-label="Recipient's username" aria-describedby="basic-addon2" value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} />
+                                        <input type="number" class="form-control" placeholder="Buy Now Price" aria-label="Recipient's username" aria-describedby="basic-addon2" value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} />
                                     </div>
-                                    <div class="d-flex-between mt-1" >
-                                        <small class="fw-normal" ></small>
-                                        <small class="fw-normal text-white" >Total offer amount: 0 ETH</small>
-                                    </div>
+                                    {
+                                        buyPrice && minimumPrice ?
+                                            buyPrice <= minimumPrice ?
+                                                <span className="mt-2" style={{ color: 'red' }}>Please Enter Price Greater Then Minimum Price </span>
+                                                :
+                                                null
+                                            :
+                                            null
+                                    }
                                     <div class="form-group">
-                                        <label>Duration</label>
-                                        <div class="row gx-2" >
+                                        {/* <label>Duration</label> */}
+                                        <div class="row gx-2 mt-2" >
                                             <div class="col-12" >
                                                 {/* {bidPeriod < 1 ? alertErrorMessage('Minimum Rent period is one day') : null} */}
-                                                <input type="text" class="form-control" placeholder="Bid Period" aria-label="Recipient's username" aria-describedby="basic-addon2" value={bidPeriod} onChange={(e) => setBidPeriod(e.target.value)} />
-
+                                                <input type="number" class="form-control" placeholder="Bid Period" aria-label="Recipient's username" aria-describedby="basic-addon2" value={bidPeriod} onChange={(e) => setBidPeriod(e.target.value)} />
+                                                <span class="mt-2">Minimum Bid period is one day</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1064,32 +1232,18 @@ const NftDetails = (props) => {
                             <div class="modal-footer no-border px-8 pb-5">
                                 <div className="container" >
                                     <div className="row justify-content-center" >
-                                        <div class="col-md-6" >
+                                        <div class="col-md-12" >
                                             {
-                                                walletAddress === '0xC1fEec289C4110A103F7A3F759cFA7a61d18a173' ?
-                                                    <button type="button" class="btn btn-gradient btn-lg w-100 justify-content-center" onClick={() => approveMakeanOfferCenterLized()} >
+                                                walletType === 'centralized' ?
+                                                    <button type="button" class="btn btn-gradient btn-lg w-100 justify-content-center" onClick={() => approveMakeanOfferCenterLized()} disabled={buyPrice <= minimumPrice || !bidPeriod}>
                                                         <span>Auction</span>
                                                     </button>
                                                     :
-                                                    <button type="button" class="btn btn-gradient btn-lg w-100 justify-content-center" onClick={() => approveMakeanOffer()} >
+                                                    <button type="button" class="btn btn-gradient btn-lg w-100 justify-content-center" onClick={() => approveMakeanOffer()} disabled={buyPrice <= minimumPrice || !bidPeriod}>
                                                         <span>Auction</span>
                                                     </button>
                                             }
                                         </div>
-                                        {
-                                            props?.userid[0]?.bids[0]?.user_id ?
-                                                <div class="col-md-6" >
-                                                    {
-                                                        walletAddress === '0xC1fEec289C4110A103F7A3F759cFA7a61d18a173' ?
-                                                            <Link class="btn btn-lg btn-gradient w-100 justify-content-center btn-border-gradient" onClick={() => takeHighestBidCentralized(props?.userid[0]?.token_id)}><span>Highest Bid</span></Link>
-                                                            :
-                                                            <Link class="btn btn-lg btn-gradient w-100 justify-content-center btn-border-gradient" onClick={() => takeHighestBid(props?.userid[0]?.token_id)}><span>Highest Bid</span></Link>
-                                                    }
-
-                                                </div>
-                                                : ''
-                                        }
-
                                     </div>
                                 </div>
                             </div>
@@ -1098,7 +1252,7 @@ const NftDetails = (props) => {
                 </div>
 
                 {/* Report model */}
-                <div class="modal fade" id="reportmodal" tabindex="-1" aria-labelledby="reportmodalLabel" aria-hidden="true">
+                <div class="modal fade" id="reportmodal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="reportmodalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content">
                             <div class="modal-header no-border flex-column px-8">
@@ -1125,11 +1279,32 @@ const NftDetails = (props) => {
                     </div>
                 </div>
 
+
+                <div className="modal fade" id="enterpasswordmodal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="enterpasswordmodallabel" aria-hidden="true">
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content">
+                            <div className="modal-header no-border flex-column px-8">
+                                <h3 className="modal-title" id="enterpasswordmodallabel"> Enter Your Password </h3>
+                                <button type="button" className="btn-custom-closer" data-bs-dismiss="modal" aria-label="Close"><i
+                                    className="ri-close-fill"></i></button>
+                            </div>
+                            <div className="modal-body" >
+                                <form className=" px-4" >
+                                    <hr />
+                                    <div class="form-group mb-5 mt-5">
+                                        <label> Password </label>
+                                        <input type="password" class="form-control" placeholder="Enter Your Password" aria-label="f-name" aria-describedby="basic-addon2" name="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                                    </div>
+                                    <button type="button" class="btn btn-gradient btn-border-gradient w-100 justify-content-center mb-4" onClick={() => handleDecryptData(password)}>
+                                        <span>SAVE</span></button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </>
             : <ProfilePage />
     )
-
-
 }
 
 export default NftDetails

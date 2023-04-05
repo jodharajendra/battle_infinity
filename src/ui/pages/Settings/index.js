@@ -47,7 +47,6 @@ const Settings = () => {
     const fileUploaded = event.target.files[0];
     const imgata = URL.createObjectURL(fileUploaded);
     setLogoImage(imgata);
-
     handleUpdateLogoImages(fileUploaded);
   }
 
@@ -58,6 +57,7 @@ const Settings = () => {
         try {
           alertSuccessMessage(result.message);
           handleuserProfile();
+          window.location.reload();
         } catch (error) {
           alertErrorMessage(error);
           // console.log('error', `${error}`);
@@ -92,6 +92,11 @@ const Settings = () => {
           setEmailId(result?.data?.email_or_phone);
           setBannerImage(result?.data?.cover_photo);
           setLogoImage(result?.data?.logo);
+          setFacebookLink(result?.data?.social_connections?.facebookLink);
+          setSocialLink(result?.data?.social_connections?.socialLink);
+          setInstagram(result?.data?.social_connections?.instagram);
+          setTwitterLink(result?.data?.social_connections?.twitter);
+          setShortBio(result?.data?.profile_description);
         } catch (error) {
           alertErrorMessage(result.message);
         }
@@ -170,9 +175,7 @@ const Settings = () => {
             <div className="row justify-content-center">
               <div className="col-xl-12">
                 <div className="main_panel nft_c_bar">
-
                   <SideBar />
-
                   <div className="nft_main_bar side_main_panel">
                     <div className="my_account" >
                       <section className="profile_sec">
@@ -186,25 +189,25 @@ const Settings = () => {
                                 Upload Photo</span>
                               <input type="file" class="upload" onChange={handleChangeBannerImage} />
                             </div>
-
                             {localBannerImage ?
                               <img src={`${ApiConfig.baseUrl + localBannerImage}`} />
-                              :
-                              <img src={`${ApiConfig.baseUrl + bannerImage}`} />
+                              : bannerImage ?
+
+                                <img src={`${ApiConfig.baseUrl + bannerImage}`} />
+                                :
+                                <img src='images/banners/banner_1.png' />
                             }
-
-
-
-
-
                           </div>
                           <div className="user_img" >
                             <div class="change-photo-btn"> Upload Photo <input type="file" class="upload" onChange={handleChangeLogoImage} /></div>
                             {localLogoImage ?
                               <img src={`${ApiConfig.baseUrl + localLogoImage}`} />
 
-                              :
-                              <img src={`${ApiConfig.baseUrl + logoImage}`} />
+                              : logoImage ?
+                                <img src={`${ApiConfig.baseUrl + logoImage}`} />
+                                :
+                                <img src='images/avatar/user_lg.jpg' />
+
                             }
 
                           </div>

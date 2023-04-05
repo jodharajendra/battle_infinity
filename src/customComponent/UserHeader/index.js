@@ -5,12 +5,10 @@ const UserHeader = () => {
   const [isAuth, setIsAuth] = useState('0');
   function hideMenu() {
     let tab = document.getElementById("qwert");
-    console.log(tab);
     tab.classList.remove("active");
   }
   function showMenu() {
     let tab = document.getElementById("qwert");
-    console.log(tab);
     tab.classList.add("active");
   }
 

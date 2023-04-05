@@ -7,6 +7,10 @@ const Footer = () => {
 
   const [emailAddress, setEmaliAddress] = useState('')
 
+  const accessToken = localStorage.getItem("accessToken");
+  const refreshToken = localStorage.getItem("refreshToken");
+
+
   const handleSubscribe = async (emailAddress) => {
     await AuthService.subscribeEmail(emailAddress).then(async result => {
       if (result.success) {
@@ -47,7 +51,16 @@ const Footer = () => {
                 <h4>Battle Infnity</h4>
                 <ul className="footer-list-widget">
                   <li><Link to="/explore_collections">Explore</Link></li>
-                  <li><Link to="/rentnft">Rent NFTs</Link></li>
+                  {
+                    accessToken && refreshToken ?
+
+                      <li><Link to="/rentnft">Rent NFTs</Link></li>
+
+                      :
+                      <li><Link to="/login">Rent NFTs</Link></li>
+
+
+                  }
                   <li><Link to="/about-us">About</Link></li>
                 </ul>
               </div>

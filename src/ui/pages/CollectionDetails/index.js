@@ -9,13 +9,12 @@ import { ApiConfig } from "../../../api/apiConfig/apiConfig";
 import moment from "moment";
 import { BarChart } from 'react-charts-d3';
 import { $ } from "react-jquery-plugin";
-import NftDetails from "../NftDetails";
-import NftDetailsWithoutLogin from "../NftDetailsWithoutLogin";
+import AfterCollectionNftDetails from "../AfterCollectionNftDetails";
 
 const CollectionDetails = () => {
     const TokenAddress = localStorage.getItem("accessToken");
 
-    console.log(TokenAddress, 'TokenAddress');
+    // console.log(TokenAddress, 'TokenAddress');
 
     const navigate = useNavigate();
     const [activityData, setActivityData] = useState([]);
@@ -63,38 +62,16 @@ const CollectionDetails = () => {
         messagesEndRef?.current?.scrollIntoView(true)
     }
 
-
-    const handleLogOut = () => {
-        updateProfileState({});
-        localStorage.clear();
-        navigate("/login");
-        window.location.reload();
-    }
-
     useEffect(() => {
         handleCollectionDetails(userId)
     }, []);
 
-
-    const handleSearch = (e) => {
-        let serchItem = collectednftSearch?.nfts.filter((item) => {
-            console.log(item, 'item?.name::SearchItem');
-            return item?.name?.includes(e.target.value)
-        })
-        setCollectionDetailsNew(serchItem)
-    }
 
     const handleCollectionDetails = async (userId) => {
         await AuthService.getCollectionDetails(userId).then(async result => {
             if (result.success) {
                 setCollectionDetails(result?.data);
                 setCollectedNftSearch(result?.data)
-            }
-            if (result?.message === 'Unauthorized Request!') {
-                alertErrorMessage(result?.message)
-                handleLogOut();
-            } else {
-
             }
         });
     }
@@ -310,7 +287,7 @@ const CollectionDetails = () => {
 
                                     <form action="#" className="mt-10">
                                         <div className="filter-style-one common-filter d-flex-between profile_filter">
-                                            <div className="d-flex-center filter-left-cate profile_filter_left">
+                                            {/* <div className="d-flex-center filter-left-cate profile_filter_left">
                                                 <button className="btn-icon-lg btn-icon me-2 side_toggle" id="side_toggle" type="button">
                                                     <i className="ri-filter-3-line"></i>
                                                 </button>
@@ -320,19 +297,7 @@ const CollectionDetails = () => {
                                                     <button className="search-btn" type="button"> <i className="ri-search-line"></i> </button>
                                                 </div>
 
-                                            </div>
-                                            {/* <!-- End .left filer --> */}
-
-                                            <div className="d-flex-center filter-right-cate grid-view-tabs profile_filter_right">
-                                                <ul className="nav icon-tabs">
-                                                    <li>
-                                                        <Link className="btn active" data-bs-toggle="tab" to="#view-grid"><i className="ri-grid-fill"></i></Link>
-                                                    </li>
-                                                    <li>
-                                                        <Link className="btn" data-bs-toggle="tab" to="#view-list"><i className="ri-layout-2-fill"></i></Link>
-                                                    </li>
-                                                </ul>
-                                            </div>
+                                            </div> */}
                                         </div>
                                     </form>
 
@@ -462,7 +427,11 @@ const CollectionDetails = () => {
 
                                         <div className="side_main_panel">
                                             <div className="iterfsh">
-                                                <Link to="#" className=""> <i className="ri-refresh-line me-2"></i> Updated 18m ago </Link>
+                                                {
+                                                    collectionDetails?.nfts?.length > 0 ?
+                                                        <Link to="#" className="">  <i className="ri-refresh-line me-2"></i> Updated 18m ago </Link>
+                                                        : ''
+                                                }
                                                 <h5>{collectionDetails?.nfts?.length} Items</h5>
                                             </div>
                                             <div className="tab-content author-tabs-content">
@@ -478,9 +447,9 @@ const CollectionDetails = () => {
                                                                     <div className="grid_iteam">
                                                                         <div className="explore-style-one explore-style-overlay border-gradient">
                                                                             <div className="thumb">
-                                                                                <img src={`${ApiConfig.baseUrl + data?.file}`}
-                                                                                    alt="nft live auction thumbnail" />
-
+                                                                                <div className="ratio ratio-1x1" >
+                                                                                    <img src={`${ApiConfig.baseUrl + data?.file}`} alt="nft live auction thumbnail" />
+                                                                                </div>
                                                                             </div>
                                                                             {/* <!-- End .thumb --> */}
                                                                             <div className="content px-4">
@@ -510,110 +479,12 @@ const CollectionDetails = () => {
                                                                                     <span className="biding-price d-flex-center  text-white">Asking Price</span>
                                                                                     <span className="biding-price d-flex-center  text-white">{data?.price}</span>
                                                                                 </div>
-
-                                                                                {/* <!-- action-wrapper --> */}
                                                                             </div>
-                                                                            {/* <Link to="#" data-bs-toggle="modal" data-bs-target="#make_offoer_modal"
-                                                                                className="btn  btn-block btn-gradient w-100 text-center btn-small"><span> Rent now </span>
-                                                                            </Link> */}
-                                                                            {/* <!-- End .content --> */}
-                                                                        </div>
-                                                                    </div>
 
-                                                                )
-
-                                                                :
-
-                                                                collectionDetailsNew?.length > 0 ? collectionDetailsNew?.map((item) =>
-                                                                    <div className="grid_iteam">
-                                                                        <div className="explore-style-one explore-style-overlay border-gradient">
-                                                                            <div className="thumb">
-                                                                                {/* <Link to="#"> */}
-                                                                                <img src={`${ApiConfig.baseUrl + item?.logo}`}
-                                                                                    alt="nft live auction thumbnail" />
-                                                                                {/* </Link> */}
-
-                                                                                {/* <!-- End .count-down --> */}
-
-                                                                                {/* <!-- End .reaction-count --> */}
-                                                                            </div>
-                                                                            {/* <!-- End .thumb --> */}
-                                                                            <div className="content px-4">
-                                                                                <div className="d-flex-between align-items-center pt-4">
-                                                                                    <div>
-                                                                                        <div className="header d-flex-between">
-                                                                                            <h3 className="title">
-                                                                                                {item?.name}
-                                                                                                {/* <Link to="#"> </Link> */}
-
-                                                                                            </h3>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    <span className="biding-price d-flex-center text-white"> #556 </span>
-                                                                                </div>
-                                                                                <hr />
-                                                                                {/* <!-- End .product-owner --> */}
-                                                                                <div className="action-wrapper d-flex-between border-0 pb-4">
-                                                                                    <span className="biding-price d-flex-center  text-white">Asking Price</span>
-                                                                                    <span className="biding-price d-flex-center  text-white">$ 2.055</span>
-                                                                                </div>
-
-                                                                                {/* <!-- action-wrapper --> */}
-                                                                            </div>
-                                                                            {/* <Link to="#" data-bs-toggle="modal" data-bs-target="#make_offoer_modal"
-                                                                                className="btn  btn-block btn-gradient w-100 text-center btn-small"><span> Rent now </span>
-                                                                            </Link> */}
-                                                                            {/* <!-- End .content --> */}
                                                                         </div>
                                                                     </div>
 
                                                                 ) : null
-
-
-                                                            }
-
-
-
-                                                        </div>
-                                                    </section>
-                                                </div>
-                                                <div id="view-list" className="tab-pane fade">
-                                                    <section className="explore_view">
-                                                        <div className="itemas_view grid-container grid-view-two">
-                                                            {collectionDetails?.length > 0 ? collectionDetails?.map((data, index) => {
-                                                                return (
-                                                                    <div className="grid_iteam">
-
-                                                                        <div className="explore-style-one explore-style-overlay border-gradient">
-
-                                                                            <div className="thumb">
-                                                                                <Link to="#"><img src={`${ApiConfig.baseUrl + data?.file}`}
-                                                                                    alt="nft live auction thumbnail" /></Link>
-                                                                            </div>
-                                                                            <div className="content px-4">
-                                                                                <div className="d-flex-between align-items-center pt-4">
-                                                                                    <div>
-                                                                                        <div className="header d-flex-between">
-                                                                                            <h3 className="title"><Link to="#">{data?.name}</Link></h3>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    <span className="biding-price d-flex-center text-white">{index} </span>
-                                                                                </div>
-                                                                                <hr />
-                                                                                <div className="action-wrapper d-flex-between border-0 pb-4">
-                                                                                    <span className="biding-price d-flex-center  text-white">Asking Price</span>
-                                                                                    <span className="biding-price d-flex-center  text-white">$ 2.055</span>
-                                                                                </div>
-                                                                            </div>
-                                                                            {/* <Link to="#" data-bs-toggle="modal" data-bs-target="#make_offoer_modal"
-                                                                            className="btn  btn-block btn-gradient w-100 text-center btn-small"><span> Rent now </span>
-                                                                        </Link> */}
-                                                                        </div>
-                                                                    </div>
-
-                                                                )
-                                                            }) :
-                                                                ""
                                                             }
                                                         </div>
                                                     </section>
@@ -711,17 +582,6 @@ const CollectionDetails = () => {
                                             </div>
                                         </div>
                                         <div className="side_main_panel">
-                                            <div className="iterfsh">
-                                                <div className="itfrsh_start">
-                                                    {/* <Link className="btn-sm btn-outline border-gradient me-2"> */}
-                                                    {/* <span>Sales <i className="ri-close-line ms-1 pe-0"></i></span> */}
-                                                    {/* </Link> */}
-                                                    {/* <Link to="#" className="text-white"> Clear all </Link> */}
-                                                </div>
-                                                <div className="filter-select-option border-gradient">
-                                                    <Select options={optionTimes} />
-                                                </div>
-                                            </div>
                                             <div className="list_card border-gradient mb-4">
                                                 <div className="list-header position-relative">
                                                     <div className="py-5 text-center">
@@ -883,7 +743,7 @@ const CollectionDetails = () => {
                 </div>
             </>
             :
-            <NftDetails userid={[userData, activeScreen]} />
+            <AfterCollectionNftDetails userid={[userData, activeScreen]} />
 
     )
 }

@@ -10,20 +10,17 @@ const MyCollection = () => {
 
     useEffect(() => {
         scrollTop();
-        // handleCollectionData();
         handleuserProfile();
-        mycollections();
+        handleSetLimitMyCollection();
     }, []);
 
     const scrollTop = () => {
         messagesEndRef?.current?.scrollIntoView(true)
     }
-
     const [collectionData, setCollectionData] = useState([]);
     const [emailId, setEmailId] = useState("");
-    const [propertyId, setPropertyId] = useState([]);
-
-
+    const [limitMyCollection, setLimitMyCollection] = useState(3);
+    const [exploreLength, setExploreLength] = useState([]);
     const [profileState, updateProfileState] = useContext(ProfileContext);
     const navigate = useNavigate();
 
@@ -69,39 +66,15 @@ const MyCollection = () => {
         });
     }
 
-    const mycollections = async () => {
-        await AuthService.mycollections1().then(async result => {
-            if (result.success) {
-                // setCollectionData(result?.data?.data.reverse())
-                // alertSuccessMessage(result?.message);
-            } else {
-                // alertErrorMessage(result?.message);
 
-            }
-        });
-    }
-
-
-    const handleProceed = (id) => {
-        window.location.replace(`collection_details?id=${id}`);
-    };
-
-
-    let limit = '1000'
-
-
-  useEffect(() => {
-        handleSetLimitCreated();
-    }, []);
-
-
-
-    const handleSetLimitCreated= async () => {
-        await AuthService.mycollections2(limit).then(async result => {
+    const handleSetLimitMyCollection = async () => {
+        await AuthService.mycollections2(limitMyCollection).then(async result => {
             if (result.success) {
                 try {
-                    // alertSuccessMessage(result?.message)
+                    // console.log(result, 'resultRj');
                     setCollectionData(result?.data?.data.reverse())
+                    setExploreLength(result?.data?.filter?.count)
+                    setLimitMyCollection(limitMyCollection + 3);
                 } catch (error) {
                     alertErrorMessage(result.message);
                 }
@@ -137,21 +110,21 @@ const MyCollection = () => {
                                         ? collectionData.map((item) => (
                                             <div className="col-xxl-4 col-md-6 mb-6" >
                                                 <div className="popular-collection-style-one border-gradient">
-                                                    <Link onClick={() => handleProceed(item?.id)}  >
+                                                    <Link to={`collection_details?id=${item?.id}`} >
                                                         {!item?.banner_image ? <img src="images/collection/tc_1.png" alt="popular collection" /> :
                                                             <div className="large-thumbnail ratio ratio-16x9"> <img src={`${ApiConfig.baseUrl + item?.banner_image}`} /></div>
                                                         }
                                                     </Link>
                                                     <div className="content content-flex p-4">
                                                         {!item?.logo ? <img src="images/popular/small/2.png" className="avatar avatar_72" alt="history" /> :
-                                                            <Link to="/profile" className="avatar avatar_72" tabindex="0">
+                                                            <Link to={`collection_details?id=${item?.id}`} className="avatar avatar_72" tabindex="0">
                                                                 <img src={`${ApiConfig.baseUrl + item?.logo}`} className="img-fluid" />
                                                             </Link>
                                                         }
                                                         <div className="inner">
                                                             <h4 className="title ">
-                                                                <Link className="d-flex align-items-center" onClick={() => handleProceed(item?.id)}>{item?.name}
-                                                                    {/* <img src="images/verified.png" className="img-fluid verify_img" /> */}
+                                                                <Link className="d-flex align-items-center" to={`collection_details?id=${item?.id}`}>{item?.name}
+                                                                    <img src="images/verified.png" className="img-fluid verify_img" />
                                                                 </Link>
                                                             </h4>
                                                             <span className="d-flex align-items-center text-white" > <small>Category</small>  <strong className="ms-2" > {item?.category?.name}</strong> </span>
@@ -162,138 +135,23 @@ const MyCollection = () => {
                                         ))
                                         : null}
                                 </div>
-                            </div>
-                        </section>
-                    </div>
-                    <div id="view-list" className="tab-pane fade">
-                        <section className="explore_view" >
-                            <div className="container" >
-                                <div className="list_card border-gradient">
-                                    <div className="table-responsive position-relative" >
-                                        <table className="table text-white " >
-                                            <thead className="text-uppercase" >
-                                                <tr className="text-gragient font_passo" >
-                                                    <th scope="col">
-                                                        Collection
-                                                    </th>
-                                                    <th scope="col">
-                                                        <div className="text-center" >volume</div>
-                                                    </th>
-                                                    <th scope="col">
-                                                        <div className="text-center" >lowest</div>
-                                                    </th>
-                                                    <th scope="col">
-                                                        <div className="text-center" >highest</div>
-                                                    </th>
-                                                    <th scope="col">
-                                                        <div className="text-center" >listed</div>
-                                                    </th>
-                                                    <th scope="col">
-                                                        <div className="text-end" >supply</div>
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td>
-                                                        <div className="d-flex-center avatar-info item_info">
-                                                            <div className="thumb-wrapper">
-                                                                <Link to="#" className="thumb">
-                                                                    <img src="images/top-seller/1.png" alt="top sellter" />
-                                                                </Link>
-                                                            </div>
-                                                            {/* <!-- End .thumb-wrapper --> */}
-                                                            <div className="content">
-                                                                <p className="title mb-0  pb-1"><Link to="#">ORI#365</Link></p>
-                                                            </div>
-
-                                                            {/* <!-- End .content --> */}
+                                {
+                                    collectionData.length > 0 ?
+                                        <>
+                                            {
+                                                exploreLength === collectionData.length ? '' :
+                                                    <div className="row">
+                                                        <div className="col-12 text-center mt-4">
+                                                            <button type="button" className="btn btn-outline border-gradient px-6" onClick={handleSetLimitMyCollection}>
+                                                                <span><i className="ri-loader-4-fill"></i> Load More</span>
+                                                            </button>
                                                         </div>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mb-0 text-center" >2.500 ETH <br /> <small>$3,656.0</small></p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="title mb-0  pb-1 text-center"><Link to="#">ORI#365</Link></p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mb-0 text-center" >1</p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mb-0 text-center" >47515</p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mb-0 text-end" >24235235</p>
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td>
-                                                        <div className="d-flex-center avatar-info item_info">
-                                                            <div className="thumb-wrapper">
-                                                                <Link to="#" className="thumb">
-                                                                    <img src="images/top-seller/1.png" alt="top sellter" />
-                                                                </Link>
-                                                            </div>
-                                                            {/* <!-- End .thumb-wrapper --> */}
-                                                            <div className="content">
-                                                                <p className="title mb-0  pb-1"><Link to="#">ORI#365</Link></p>
-                                                            </div>
-
-                                                            {/* <!-- End .content --> */}
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mb-0 text-center" >2.500 ETH <br /> <small>$3,656.0</small></p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="title mb-0  pb-1 text-center"><Link to="#">ORI#365</Link></p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mb-0 text-center" >1</p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mb-0 text-center" >47515</p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mb-0 text-end" >24235235</p>
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td>
-                                                        <div className="d-flex-center avatar-info item_info">
-                                                            <div className="thumb-wrapper">
-                                                                <Link to="#" className="thumb">
-                                                                    <img src="images/top-seller/1.png" alt="top sellter" />
-                                                                </Link>
-                                                            </div>
-                                                            {/* <!-- End .thumb-wrapper --> */}
-                                                            <div className="content">
-                                                                <p className="title mb-0  pb-1"><Link to="#">ORI#365</Link></p>
-                                                            </div>
-
-                                                            {/* <!-- End .content --> */}
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mb-0 text-center" >2.500 ETH <br /> <small>$3,656.0</small></p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="title mb-0  pb-1 text-center"><Link to="#">ORI#365</Link></p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mb-0 text-center" >1</p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mb-0 text-center" >47515</p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mb-0 text-end" >24235235</p>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                                                    </div>
+                                            }
+                                        </>
+                                        :
+                                        ''
+                                }
                             </div>
                         </section>
                     </div>

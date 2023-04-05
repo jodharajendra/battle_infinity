@@ -43,7 +43,7 @@ const SideBar = () => {
                         </Link>
                     </li>
                     <li>
-                        <Link className="ss_link " to="/settings">
+                        <Link className="ss_link " to="/update_profile">
                             <i class="ri-settings-line"></i> Settings
                         </Link>
                     </li>
